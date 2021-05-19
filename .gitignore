@@ -1,0 +1,11 @@
+
+# Visual Studio Code
+/.vscode
+
+#
+Devices_Logs/
+images/
+.idea/
+
+file.txt
+casos_de_prueba/
