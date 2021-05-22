@@ -127,7 +127,12 @@ class Device_handler:
             return False
         return True
 
-    
+    def __validate_ping(self, host_name, des_ip):
+        if not any(h.name == host_name for h in self.hosts):
+            return False
+        if not netl.ValidIP(des_ip):
+            return False
+        return True 
 
 
     def finished_network_transmission(self):
@@ -167,6 +172,13 @@ class Device_handler:
         newswitch = objs.Switch(name, ports)
         self.switches.append(newswitch)
         for port in newswitch.ports:
+            self.ports[port.name] = port
+
+    def create_router(self, name: str, ports: int, time: int):
+        self.__update_network_status(time)
+        newrouter = objs.Router(name, ports)
+        self.routers.append(newrouter)
+        for port in newrouter.ports:
             self.ports[port.name] = port
 
     def setup_ip(self, name, interface, ip, mask, time):
@@ -395,7 +407,13 @@ class Device_handler:
                 self.devices_visited.clear()
                 host.init_transmission(self.devices_visited, nextbit, time)
 
-                
+    
+    def ping (self, host_name, des_ip, time):
+        self.__update_network_status(time)
+        if self.__validate_ping(host_name, des_ip):
+            host = self.ports[host_name+'_1'].device
+
+
     def send_packet(self, host_name, des_ip,  data, time):
         self.__update_network_status(time)
         if self.__validate_send_packet(host_name, des_ip, data):
