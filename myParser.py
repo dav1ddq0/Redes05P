@@ -68,8 +68,17 @@ def create_parse(args : list, time: int):
             return args[1], [args[2], ports_amount, time]
         else:
             print("Invalid amount of arguments")
-    
-    else : print("Invalid amount of arguments")
+    elif args[1] =="router":
+        ports_amount = 0
+        try:
+            ports_amount = int(args[3])
+        except ValueError:
+            print("Invalid parameter")
+        if len(args) == 4:
+            return args[1], [args[2], ports_amount, time]
+        else : print("Invalid amount of arguments")
+    else:
+        print("invalida create command")
 
 
 def mac_parse(args: list, time:int):

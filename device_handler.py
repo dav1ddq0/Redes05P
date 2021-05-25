@@ -4,6 +4,8 @@ import string
 import errors_algs
 import re
 import network_layer_utils as netl
+import link_layer_utils as linkl
+
 errors = {1 : "do not has a cable connected", 2: "does not exist", 3: "is not free", 4: "the device must be a host",
         5: "host busy (collision)", 6: "has a cable connected, but its other endpoint is not connected to another device" }
 class bcolors:
@@ -34,6 +36,7 @@ class Device_handler:
         self.devices_visited = []
         objs.handler = self
         netl.handler = self
+        linkl.handler = self
 
 
     def __validate_send(self, host) -> bool:
@@ -353,20 +356,11 @@ class Device_handler:
 
 
 
-    def add_more_zeros(self, data:str):
-        # devuelve el reste que deja el multiplo de 8 (8q) mas cercano al len de data que es >= que len(data)
-        near_mul = lambda pow8, number : pow8% number if pow8 > number else near_mul(pow8+8, number)
-        for i in range(near_mul(8, len(data))):
-            data = '0' +data
-        return data
-        
-    def setup_data(self,data):
-        databin = format(int(data, base = 16), '08b')
-        return  self.add_more_zeros(databin)   
+    
 
     def setup_send_frame(self, origin_pc, destiny_mac, datahex, time):
         if self.__validate_data_hex(datahex):
-            data_bin = self.setup_data(datahex)
+            data_bin = linkl.setup_data(datahex)
             self.send_frame(origin_pc, destiny_mac, data_bin, time)
         else:
             print('Data not in hex')
@@ -375,15 +369,11 @@ class Device_handler:
     def send_frame(self ,origin_pc, destiny_mac:str, data:str, time: int):
         # actualiza primero la red por si todavia no ha llegado a time
         self.__update_network_status(time)
-
+        # valido el send frame
         if self.__validate_send_frame(origin_pc, destiny_mac):
+            # busco la pc desde la que se va a enviar el host
             host = self.ports[f'{origin_pc}_1'].device
-            if self.error_detection == 'crc':
-                encode = self.add_more_zeros(format(int(errors_algs.CRCEncode(data), base = 2), '08b'))
-            else:
-                _,redundant_bits_amount = errors_algs.hamming_encode(data)
-                encode = self.add_more_zeros(format(redundant_bits_amount, '08b'))
-            data_frame = format(int(destiny_mac, base = 16), '016b') + format(int(host.mac, base=16), '016b') + format(len(data)//8, '08b') + format(len(encode)//8, '08b') + data + encode
+            data_frame = linkl.get_frame(destiny_mac, host.mac, data)
             host.add_frame(data_frame)
             # en caso que el host este disponible para enviar pues el mismo puede estar
             # en medio de una transmision o estar esperando producto de una colision a enviar un dato fallido 
@@ -412,13 +402,16 @@ class Device_handler:
         self.__update_network_status(time)
         if self.__validate_ping(host_name, des_ip):
             host = self.ports[host_name+'_1'].device
+            bin_data = linkl.setup_data('8')
+            host.add_packet(des_ip, bin_data, 1)
+            
 
 
     def send_packet(self, host_name, des_ip,  data, time):
         self.__update_network_status(time)
         if self.__validate_send_packet(host_name, des_ip, data):
             host = self.ports[host_name+'_1'].device
-            bin_data = self.setup_data(data)
+            bin_data = linkl.setup_data(data)
             host.add_packet(des_ip, bin_data)
             netl.search_ip(host, 'FFFF', des_ip)
         

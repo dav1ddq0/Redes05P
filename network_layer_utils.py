@@ -1,3 +1,5 @@
+from network_layer_objs import Interface, Packet, Route
+import link_layer_utils as linkl
 import re
 
 handler = None
@@ -30,9 +32,29 @@ def is_ip_packet(data):
         return payload_size == len(payload)
     return False
 
+def get_packet_from_frame(frame:str):
+    nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
+    data = frame[48:48+nsizebits]
+    des_ip = get_ip_from_bin(data[0:32])    
+    ori_ip = get_ip_from_bin(data[32:64])
+    return des_ip
+    
+
+def get_data_from_frame(frame:str):
+    nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
+    data = frame[48:48+nsizebits]
+    return data
+
+
 def search_ip(host, des_mac, des_ip):
     q = ARPQuery(des_ip)
     handler.send_frame(host.name, des_mac, q, handler.time)
+
+def seach_ip_from_router(interface, des_mac, des_ip):
+    q = ARPQuery(des_ip)
+    frame = linkl.get_frame(des_mac, interface.mac, q)
+    return frame
+
 
 # obtiene ip format {Int}.{Int}.{Int}.{Int} de una cadena de bits donde cada byte(8bits) representa numero del ip
 def get_ip_from_bin(binIP):
@@ -49,6 +71,16 @@ def get_bin_from_ip(ip):
 # obtiene cad caracter de una cadena binaria doonde cada byte es el ascii del caracter
 def get_ascii_from_bin(bits):
     return chr(int(bits[0:8],2)) + chr(int(bits[8:16],2)) + chr(int(bits[16:24],2)) + chr(int(bits[24:32],2))
+
+def get_and_ip_op(ip1,ip2):
+    ip1b = get_bin_from_ip(ip1)
+    ip2b = get_bin_from_ip(ip2)
+    result=''
+    
+    for i,j in zip(ip1b,ip2b) :
+        result += f'{int(i) & int(j)}'
+    
+    return get_ip_from_bin(result)
 
 
 def setupFrameFromPacket(packet, host):
@@ -87,4 +119,54 @@ def ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     package += format(ttl,'08b') + format(protocol, '08b')
     package += format(len(payload)//8, '08b')
     package += payload
-    return package    
+    return package
+
+def get_package_from_frame_in_router(frame:str, interface:Interface):
+    data = get_data_from_frame(frame)
+    des_ip = data[0:32]
+    ori_ip = data[32:64]
+    ttl = data[64:72]
+    protocol = data[72:80]
+    payload_size = int(data[80:88],2) *8
+    payload = data[88:]
+    packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
+    
+    return packet
+
+# Devuelve la cantidad la cantidad de unos de la máscara de subred.
+
+def get_1s_mask(mask:str):
+    return get_bin_from_ip(mask).count('1')
+
+def add_route(routes:'list[Route]', destination:str, mask:str, gateway:str, interface:int):
+    route = route = Route(destination, mask, gateway, interface)
+    for i,r in enumerate(routes):
+        if get_1s_mask(r.mask) > get_1s_mask(route.mask):
+            routes.insert(i, route)
+            return routes
+    routes.append(route)
+    return routes
+
+def delete_route(routes:'list[Route]', destination:str, mask:str, gateway:str, interface:int):
+    for route in routes:
+        if route.destination == destination and route.mask == mask and route.gateway == gateway and route.interface == interface:
+            routes.remove(route)
+            return routes
+    return routes
+
+def match_route(route:Route, ip):
+    andOp = get_and_ip_op(route.gateway, ip) 
+    return andOp == route.destination
+
+def search_match_route(ip,routes:'list[Route]'):
+    for route in routes:
+        if match_route(route, ip):
+            return route
+    return None
+
+# def ping(host, ip:str):
+#     ping_package = ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
+    
+
+
+# print(get_and_ip_op(input(),input()))

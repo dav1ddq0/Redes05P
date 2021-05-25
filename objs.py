@@ -3,19 +3,15 @@ import queue
 import random
 import errors_algs
 import network_layer_utils as netl
+import network_layer_objs as neto
+
 handler = None
 class Data(Enum):
     Null = "Null"
     One = "1"
     Zero = "0"
 
-class Packet:
-    def __init__(self, mac_ori , ori_ip, des_ip, data):
-        self.ori_ip = ori_ip
-        self.des_ip = des_ip
-        self.data = data
-        self.mac_ori = mac_ori
-        self.mac_des = None
+
 
 class Cable:
     def __init__(self):
@@ -42,11 +38,99 @@ class Port:
         self.next = None
 
 class Router:
-    def __init__()->None:
-        return None
+    def __init__(self, name:str, ports_amount:int)->None:
+        self.name = name
+        self.ports= []
+        # port:interface{ip,mask}
+        self.interfaces={}
+        for i in range(ports_amount):
+            portname = f"{name}_{i + 1}"
+            port = Port(portname, self)
+            self.ports.append(port)
+            self.interfaces[portname] = neto.Interface()
+        
+        # tabla de rutas del router
+        self.routes =[]
 
-    def setup_ip():
-        return None
+    def reset_table(self):
+        self.routes.clear()
+    
+    def get_port_from_name(self, name):
+        for port in self.ports:
+            if port.name == name:
+                return port
+        return False
+
+    #add a new route to the router<name> <destination> <mask> <gateway> <interface>
+    def add_new_route(self, destination:str, mask:str, gateway:str, interface:int):
+        self.routes = netl.add_route(self.routes.copy(), destination, mask, gateway, interface)
+    
+    def delete_route(self, destination:str, mask:str, gateway:str, interface:int):
+        self.routes = netl.delete_route(self.routes.copy(), destination, mask, gateway, interface)
+
+    def setup_ip(self, ip, mask, port):
+        self.interfaces[port].setup_ip(ip ,mask)
+
+    def setup_mac(self, mac, port):
+        self.interfaces[port].setup_mac(mac)
+
+    def receive(self, bit, incoming_port, devices_visited, time):
+        # interface de entrada
+        rinterface = self.interfaces[incoming_port.name]
+        rinterface.rframe += bit
+        frame =  rinterface.rframe
+        if netl.is_ip_packet(frame):
+            des_ip = netl.get_packet_from_frame(frame)
+            route = netl.search_match_route(des_ip, self.routes)
+            #ninguna ruta puede enrutar dicho paquete
+            if route == None:
+                pass
+                # se debe enviar aca al host origen un paquete icmp
+            else:
+                # interface de salida
+                sportname = f'{self.name}_{route.interface}'
+                sinterface = self.interfaces[sportname]
+                data = netl.get_data_from_frame(frame)
+                packet = netl.get_package_from_frame_in_router(frame, sinterface)
+                sinterface.packets.append(packet)
+                sport = self.get_port_from_name(sportname)
+                arpq = netl.seach_ip_from_router(sinterface,'FFFF',)
+
+
+    def send(self, bit, incoming_port, devices_visited, time):
+        nextport = incoming_port.next
+        nextport.device.receive(bit, incoming_port, devices_visited, time)
+        
+
+    def put_data(self, data: str, port: Port):
+        if port.cable == None or port.write_channel.data != Data.Null or port.next == None:
+            return False
+        else:
+            port.write_channel.data = data
+            return True
+
+
+
+    def make_new_frame(self, interface, old_frame):
+        pass
+
+    
+    
+    def init_transmission(self, nextbit, incoming_port, devices_visited, time):
+        interface = self.buffers[incoming_port.name]
+        
+        if self.put_data(nextbit, incoming_port):
+            interface.transmitting = True
+            interface.transmitting_time = 0
+            self.send(nextbit, incoming_port, devices_visited, time)
+        else:
+            # collision
+            
+            pass
+            
+            # self.colision_protocol(incoming_port, time) 
+    
+
             
 class Host:
     def __init__(self, name: str, error_detection) -> None:
@@ -81,6 +165,8 @@ class Host:
         self.ip = None
         self.mask = None
         self.packets = []
+        self.routes =[]
+        # make txt files
         f = open(self.file, 'w')
         f.close()
         f = open(self.file_d, 'w')
@@ -88,8 +174,17 @@ class Host:
         f = open(self.payload,'w')
         f.close()
         
-    def add_packet(self, des_ip, data):
-        p = Packet(self.mac, self.ip, des_ip, data)
+    # def add_route(self, <destination> <mask> <gateway> <interface>):
+        
+    def reset_table(self):
+        self.routes.clear()
+
+    def add_new_route(self, destination, mask, gateway, interface):
+        route = neto.Route(destination, mask, gateway, interface)
+        self.routes = netl.add_route(self.routes.copy(), route)
+    
+    def add_packet(self, des_ip, data, protocol=0,ttl=0):
+        p = neto.Packet(self.mac, self.ip, des_ip, data, protocol, ttl)
         self.packets.append(p)
 
     
