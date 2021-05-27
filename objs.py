@@ -74,6 +74,12 @@ class Router:
     def setup_mac(self, mac, port):
         self.interfaces[port].setup_mac(mac)
 
+
+    # comprobar en cada momento el cambio interno de un router
+    def check_interfaces(self, devices_visited, time):
+        pass 
+
+
     def receive(self, bit, incoming_port, devices_visited, time):
         # interface de entrada
         rinterface = self.interfaces[incoming_port.name]
@@ -85,6 +91,7 @@ class Router:
             #ninguna ruta puede enrutar dicho paquete
             if route == None:
                 pass
+                
                 # se debe enviar aca al host origen un paquete icmp
             else:
                 # interface de salida
@@ -94,7 +101,29 @@ class Router:
                 packet = netl.get_package_from_frame_in_router(frame, sinterface)
                 sinterface.packets.append(packet)
                 sport = self.get_port_from_name(sportname)
-                arpq = netl.seach_ip_from_router(sinterface,'FFFF',)
+                arpq = netl.seach_ip_from_router(sinterface,'FFFF',route.gateway)
+                sinterface.add_frame(arpq)
+                if not sinterface.transmitting and not sinterface.stopped:
+                    nextbit = sinterface.nextbit()
+                    if nextbit != None:
+                        self.init_transmission(nextbit, sport, devices_visited, time)
+            
+            rinterface.rframe = ""
+                
+    def colision_protocol(self, port, time):
+        einterface = self.interface[port.name]
+        einterface.transmitting = False
+        # el host no puede enviar en este momento la sennal pues se esta transmitiendo informacion por el canal o no tiene canal para transmitir la informacion
+        einterface.stopped = True
+        # aumenta la cantidad de intentos fallidos
+        einterface.failed_attempts += 1 
+        # notifica que hubo una colision y la informacion no pudo enviarse
+        # el rango se duplica en cada intento fallido
+        
+        nrand = random.randint(1, 2*einterface.failed_attempts*10)
+        # dada una colision espero un tiempo cada vez mayor para poder volverla a enviar
+        einterface.stopped_time = nrand * handler.slot_time
+        
 
 
     def send(self, bit, incoming_port, devices_visited, time):
@@ -110,10 +139,6 @@ class Router:
             return True
 
 
-
-    def make_new_frame(self, interface, old_frame):
-        pass
-
     
     
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
@@ -124,14 +149,15 @@ class Router:
             interface.transmitting_time = 0
             self.send(nextbit, incoming_port, devices_visited, time)
         else:
-            # collision
-            
-            pass
+            self.colision_protocol(incoming_port, time)
             
             # self.colision_protocol(incoming_port, time) 
     
-
-            
+    def check_transmitting(self):
+        return any(interface.transmitting for interface in self.interfaces.values())
+    
+    def check_stopped(self):
+        return any(interface.stopped for interface in self.interfaces.values())
 class Host:
     def __init__(self, name: str, error_detection) -> None:
         self.name = name

@@ -133,6 +133,15 @@ def get_package_from_frame_in_router(frame:str, interface:Interface):
     
     return packet
 
+def get_new_packet_resquest_from_frame(frame:str, interface:Interface, newPayload):
+    data = get_data_from_frame(frame)
+    des_ip = data[0:32]
+    ori_ip = data[32:64]
+    ttl = data[64:72]
+    protocol = data[72:80]
+    payload = format(3, '08b')
+    packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
+    return packet
 # Devuelve la cantidad la cantidad de unos de la máscara de subred.
 
 def get_1s_mask(mask:str):

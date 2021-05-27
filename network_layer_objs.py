@@ -34,6 +34,7 @@ class Interface:
         self.transmitting = False
         self.stopped = False
         self.stopped_time = 0
+        self.failed_attempts = 0
         
     
     def next_bit(self):

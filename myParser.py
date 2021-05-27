@@ -83,7 +83,19 @@ def create_parse(args : list, time: int):
 
 def mac_parse(args: list, time:int):
     if len(args) == 3:
-        return args[0], [args[1], args[2], time]
+        t = args[1]
+        host = None
+        interface = None
+        if ':' in t:
+            host,interface = t.split(':')
+        else:
+            host = t
+        if interface=='' or interface == None:
+            interface = 1
+        else:
+            interface = int(interface)            
+        return args[0], [host, interface, args[2], time]
+        
     else:
         print("Invalid amount of arguments")
 

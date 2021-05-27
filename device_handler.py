@@ -86,8 +86,8 @@ class Device_handler:
 
         return True
 
-    def __validate_setup_mac(self,pc, mac:str):
-        port = pc + "_1"
+    def __validate_setup_mac(self,device,interface, mac:str):
+        port = f"{device}_{interface}"
         if not all(c in string.hexdigits for c in mac):
             print(f"{bcolors.WARNING} invalid mac assign{bcolors.ENDC}  {bcolors.OKGREEN}{mac} {bcolors.ENDC} not in hexadecimal")
             return False
@@ -184,22 +184,40 @@ class Device_handler:
         for port in newrouter.ports:
             self.ports[port.name] = port
 
-    def setup_ip(self, name, interface, ip, mask, time):
+    def setup_ip(self, device_name, interface, ip, mask, time):
         self.__update_network_status(time)
-        if self.__validate_ip(name, ip, mask):
-            if any(h.name == name for h in self.hosts):
-                self.ports[f"{name}_1"].device.setup_ip(ip,mask)
-            else:
-                return None
+        if self.__validate_ip(device_name, ip, mask):
+            if self.__isPC(device_name):
+                self.ports[f"{device_name}_1"].device.setup_ip(ip,mask)
+            if self.__isRouter(device_name):
+                router = self.__getRouterFromName(device_name)
+                router.setup_ip(ip, mask,f"{device_name}_{interface}")
 
+    def setup_mac(self, device_name, interface, address, time: int):
+        self.__update_network_status(time)
+        if self.__validate_setup_mac(device_name,interface, address):
+            if self.__isPC(device_name):
+                self.ports[f"{device_name}_1"].device.mac = address
+            
+            if self.__isRouter(device_name):
+                router = self.__getRouterFromName(device_name)
+                router.setup_mac(address,f"{device_name}_{interface}")
 
             
+    def __isPC (self, name):
+        return any(host.name == name for host in self.hosts)
+    def __isRouter (self, name):
+        return any(router.name == name for router in self.routers)
 
-    def setup_mac(self, host, address, time: int):
-        
-        if self.__validate_setup_mac(host,address):
+    def __getRouterFromName(self, name):
+        for router in self.routers:
+            if router.name == name:
+                return router
+        return None
 
-            self.ports[f"{host}_1"].device.mac = address
+    
+
+
 
 
     def setup_connection(self, name_port1: str, name_port2: str, time: int):
@@ -350,7 +368,32 @@ class Device_handler:
                             switch.init_transmission(nextbit, port, self.devices_visited, self.time)
                         else:
                             portbuff.transmitting = False
-                            portbuff.bit_sending = None                     
+                            portbuff.bit_sending = None
+        
+        for router in self.routers:
+            for port in router.ports:
+                interface = router.interfaces[port.name]
+                if interface.stopped:
+                    interface.stopped_time -= 1
+                    if interface.stopped_time == 0:
+                    
+                        self.devices_visited.clear()
+                        # vuelve a intentar enviar el bit que habia fallado previamente
+                        interface.stopped = False
+                        interface.init_transmission(self.devices_visited, host.bit_sending, self.time)
+                elif interface.transmitting:
+                    interface.transmitting_time += 1
+                    if interface.transmitting_time % self.slot_time == 0:
+                        port.write_channel.data = objs.Data.Null
+                        self.devices_visited.clear()
+                        port.next.device.missing_data(port.next, self.devices_visited) 
+                        nextbit = interface.next_bit()
+                        if nextbit != None:
+                            self.devices_visited.clear()
+                            router.init_transmission(nextbit, port, self.devices_visited, self.time)
+                        else:
+                            interface.transmitting = False
+                            interface.bit_sending = None
 
 
 
