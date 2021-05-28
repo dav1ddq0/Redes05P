@@ -230,4 +230,4 @@ def search_match_route(ip,routes:'list[Route]'):
     
 
 
-# print(get_and_ip_op(input(),input()))
+print(get_and_ip_op(input(),input()))

@@ -232,21 +232,30 @@ class Device_handler:
                 router.reset_table()
                 return
     #  <time> route add <name> <destination> <mask> <gateway> <interface>
-    def route_add(self, name, destination, mask, gateaway, interface:int):
-            
+    def route_add(self, name, destination, mask, gateway, interface:int, time):
+        self.__update_network_status(time)
 
-            if self.__isPC(name):
-            
-            if self.__isRouter(name):
-                router = self.__getRouterFromName(name)
-                router. add_new_route()
+        if self.__isPC(name):
+            host = self.__getHostFromName(name)
+            host.add_new_route(destination, mask, gateway, interface)
+        if self.__isRouter(name):
+            router = self.__getRouterFromName(name)
+            router. add_new_route(destination, mask, gateway, interface)
+
+    #  <time> route delete <name> <destination> <mask> <gateway> <interface>
+    def route_delete(self, name, destination, mask, gateway, interface:int, time):
+        self.__update_network_status(time)
+        
+        if self.__isPC(name):
+            host = self.__getHostFromName(name)
+            host.delete_route(destination, mask, gateway, interface)
+        if self.__isRouter(name):
+            router = self.__getRouterFromName(name)
+            router.delete_route(destination, mask, gateway, interface)
 
 
 
-
-
-
-    def setup_connection(self, name_port1: str, name_port2: str, time: int):
+    def setup_delete(self, name_port1: str, name_port2: str, time: int):
         # actualiza la red hasta que llegues al time en que vino la nueva instruccion
         self.__update_network_status(time)
 

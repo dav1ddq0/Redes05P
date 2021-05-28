@@ -230,6 +230,9 @@ class Host:
         route = neto.Route(destination, mask, gateway, interface)
         self.routes = netl.add_route(self.routes.copy(), route)
     
+    def delete_route(self, destination:str, mask:str, gateway:str, interface:int):
+        self.routes = netl.delete_route(self.routes.copy(), destination, mask, gateway, interface)
+
     def add_packet(self, des_ip, data, protocol=0,ttl=0):
         p = neto.Packet(self.mac, self.ip, des_ip, data, protocol, ttl)
         self.packets.append(p)
