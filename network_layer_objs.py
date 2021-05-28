@@ -63,3 +63,9 @@ class Interface:
         else:
             self.frame_pending.put(frame)
     
+    def add_packet(self, packet):
+        self.packets.append(packet)
+    
+    def remove_packet(self, packet):
+        self.packets.remove(packet)
+    

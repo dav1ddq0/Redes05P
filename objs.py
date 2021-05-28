@@ -4,7 +4,7 @@ import random
 import errors_algs
 import network_layer_utils as netl
 import network_layer_objs as neto
-
+import link_layer_utils as linkl
 handler = None
 class Data(Enum):
     Null = "Null"
@@ -85,30 +85,51 @@ class Router:
         rinterface = self.interfaces[incoming_port.name]
         rinterface.rframe += bit
         frame =  rinterface.rframe
-        if netl.is_ip_packet(frame):
-            des_ip = netl.get_packet_from_frame(frame)
-            route = netl.search_match_route(des_ip, self.routes)
-            #ninguna ruta puede enrutar dicho paquete
-            if route == None:
-                pass
-                
-                # se debe enviar aca al host origen un paquete icmp
-            else:
-                # interface de salida
-                sportname = f'{self.name}_{route.interface}'
-                sinterface = self.interfaces[sportname]
-                data = netl.get_data_from_frame(frame)
-                packet = netl.get_package_from_frame_in_router(frame, sinterface)
-                sinterface.packets.append(packet)
-                sport = self.get_port_from_name(sportname)
-                arpq = netl.seach_ip_from_router(sinterface,'FFFF',route.gateway)
-                sinterface.add_frame(arpq)
-                if not sinterface.transmitting and not sinterface.stopped:
-                    nextbit = sinterface.nextbit()
-                    if nextbit != None:
-                        self.init_transmission(nextbit, sport, devices_visited, time)
+        # es probable que sea un frame
+        if len(frame) > 48:
+            #obtengo la cantidad de bits que debe de tener la data del frame            
+            nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
             
-            rinterface.rframe = ""
+            len_verification_data = int(frame[40:48], 2) * 8 # longitud de los datos de verificacion en bits
+            
+            data_plus_verificationd = frame[48:]
+            # la trama que llego al router es una trama valida
+            if len(data_plus_verificationd) == nsizebits + len_verification_data:
+                #obtengo en hexadecimal la data 
+                data = linkl.get_data_from_frame(frame)
+                netl.checkARPP_Router(rinterface,incoming_port, rinterface.mac,data, self)
+
+                if netl.is_ip_packet(data):
+                    packet = netl.get_packet_from_frame(frame)
+                    
+                    route = netl.search_match_route(packet.des_ip, self.routes)
+                    #ninguna ruta puede enrutar dicho paquete
+                    if route == None:
+                        icmp3 = netl.get_destination_host_unreachable_frame(frame, rinterface)
+                        rinterface.add_frame(icmp3)
+                        if not rinterface.transmitting and not rinterface.stopped:
+                            nextbit = rinterface.nextbit()
+                            if nextbit != None:
+                                rinterface.init_transmission(nextbit, incoming_port, devices_visited, time)
+                        # se debe enviar aca al host origen un paquete icmp
+                    else:
+                        # interface de salida
+                        
+                        sportname = f'{self.name}_{route.interface}'
+                        sinterface = self.interfaces[sportname]
+                        sinterface.add_packet(packet)
+                        data = netl.get_data_from_frame(frame)
+                        packet = netl.get_package_from_frame_in_router(frame, sinterface)
+                        sinterface.packets.append(packet)
+                        sport = self.get_port_from_name(sportname)
+                        arpq = netl.seach_ip_from_router(sinterface,'FFFF',route.gateway)
+                        sinterface.add_frame(arpq)
+                        if not sinterface.transmitting and not sinterface.stopped:
+                            nextbit = sinterface.nextbit()
+                            if nextbit != None:
+                                sinterface.init_transmission(nextbit, sport, devices_visited, time)
+
+                rinterface.rframe = ""
                 
     def colision_protocol(self, port, time):
         einterface = self.interface[port.name]

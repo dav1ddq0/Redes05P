@@ -6,7 +6,8 @@ caller ={
         "send_frame" : lambda args, time : send_frame_parse(args, time),
         "mac" : lambda args, time : mac_parse(args, time),
         "ip" : lambda args, time : ip_parse(args, time),
-        "send_packet" : lambda args, time : send_packet_parse(args, time)
+        "send_packet" : lambda args, time : send_packet_parse(args, time),
+        "route": lambda args, time: send_packet_parse(args, time)
         }
 
 
@@ -95,7 +96,7 @@ def mac_parse(args: list, time:int):
         else:
             interface = int(interface)            
         return args[0], [host, interface, args[2], time]
-        
+
     else:
         print("Invalid amount of arguments")
 
@@ -171,3 +172,8 @@ def send_packet_parse(args:list, time:int):
         return args[0], [args[1], args[2], args[3], time]
     else:
         print("Invalid amount of arguments")
+
+def route_parser(args:list, time:int):
+    if args[1] == "reset" and len(args) ==2:
+        return args[1],time
+    

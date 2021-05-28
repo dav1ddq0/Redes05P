@@ -22,5 +22,10 @@ def get_frame(destiny_mac, origin_mac, data):
     data_frame = format(int(destiny_mac, base = 16), '016b') + format(int(origin_mac, base=16), '016b') + format(len(data)//8, '08b') + format(len(encode)//8, '08b') + data + encode
     return data_frame
 
+
+def get_data_from_frame(frame:str):
+    nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
+    data = frame[48:48+nsizebits]
+    return data
 # def send_frame_from_router(router, destiny):
     

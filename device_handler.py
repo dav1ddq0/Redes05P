@@ -215,7 +215,33 @@ class Device_handler:
                 return router
         return None
 
-    
+    def __getHostFromName(self, name):
+        for host in self.hosts:
+            if host.name == name:
+                return host
+        return None
+
+    def route_reset(self,name:str, time:int):
+        self.__update_network_status(time)
+        for host in self.hosts:
+            if host.name == name:
+                host.reset_table()
+                return
+        for router in self.routers:
+            if router.name == name:
+                router.reset_table()
+                return
+    #  <time> route add <name> <destination> <mask> <gateway> <interface>
+    def route_add(self, name, destination, mask, gateaway, interface:int):
+            
+
+            if self.__isPC(name):
+            
+            if self.__isRouter(name):
+                router = self.__getRouterFromName(name)
+                router. add_new_route()
+
+
 
 
 

@@ -9,6 +9,22 @@ def check_PackageCondition(host):
         if packet.mac_des != None:
             setupFrameFromPacket(packet, host)
             host.remove_packet(packet)
+
+def check_PackageCondition_From_Router(interface, port, router):
+    for packet in interface.packets:
+        if packet.mac_des != None:
+            setupFrameFromPacketRouter(packet, router, interface, port)
+            interface.remove_packet(packet)
+
+def setupFrameFromPacketRouter(packet, router, interface, port):
+    data = ip_package(packet.ori_ip,packet.des_ip, packet.data)
+    new_frame = linkl.get_frame(packet.mac_des,interface.mac,data)
+    interface.add_frame(new_frame)
+    if not interface.transmitting and not interface.stopped:
+        nextbit = interface.nextbit()
+        if nextbit != None:
+            handler.devices_visited.clear()
+            router.init_transmission(nextbit, port, handler.devices_visited, handler.time)
             
 # revisa si la cadena de bits cumple con el formato del protocolo ARP
 def checkARP(host, des_mac, bits):
@@ -23,6 +39,24 @@ def checkARP(host, des_mac, bits):
                     packet.mac_des = des_mac
             check_PackageCondition(host)     
 
+def checkARPP_Router(router, interface,port,des_mac, bits):
+    if len(bits) == 64: #cumple el formato de 4 bytes ARPR | ARPQ 4bytes IP
+        ip = get_ip_from_bin(bits[32:]) # convert bits chunk to {}.{}.{}.{} ip format 
+        word = get_ascii_from_bin(bits[0:32]) # convert
+        if word == 'ARPQ':
+            new_frame = linkl.get_frame(des_mac,interface.mac,ARPResponse(ip))
+            interface.add_frame(new_frame)
+            if not interface.transmitting and not interface.stopped:
+                nextbit = interface.nextbit()
+                if nextbit != None:
+                    handler.devices_visited.clear()
+                    interface.init_transmission(nextbit, port, handler.devices_visited, handler.time)
+                        
+        if word == 'ARPR':
+            for packet in interface.packets:
+                if packet.des_ip == ip:
+                    packet.mac_des = des_mac
+            check_PackageCondition_From_Router(interface,port, router)  
 
 # revisa si la data puede ser un ip_packet
 def is_ip_packet(data):
@@ -32,18 +66,17 @@ def is_ip_packet(data):
         return payload_size == len(payload)
     return False
 
-def get_packet_from_frame(frame:str):
-    nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
-    data = frame[48:48+nsizebits]
+def get_packet_from_frame(frame:str, interface):
+    data = linkl.get_data_from_frame(frame)
     des_ip = get_ip_from_bin(data[0:32])    
     ori_ip = get_ip_from_bin(data[32:64])
-    return des_ip
+    ttl = int(data[64:72],2)
+    protocol = int(data[72:80])
+    payload = data[88:]
+    new_packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
+    return new_packet
     
 
-def get_data_from_frame(frame:str):
-    nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
-    data = frame[48:48+nsizebits]
-    return data
 
 
 def search_ip(host, des_mac, des_ip):
@@ -121,20 +154,39 @@ def ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     package += payload
     return package
 
-def get_package_from_frame_in_router(frame:str, interface:Interface):
-    data = get_data_from_frame(frame)
+def get_destination_host_unreachable_frame(oldFrame, interface):
+    des_mac = oldFrame[0:16]
+    ori_mac = oldFrame[16:32]
+    ip_packet_elems = get_ip_packet_elems(oldFrame)
+    des_ip = ip_packet_elems[0]
+    ori_ip = ip_packet_elems[1]
+    new_ip_packet =ip_package(interface.packet, ori_ip, format(3,'08b'), 0,1)
+    new_frame = linkl.get_frame(ori_mac, des_mac, new_ip_packet)
+    return new_frame
+
+
+def get_ip_packet_elems(frame:str):
+    data = linkl.get_data_from_frame(frame)
     des_ip = data[0:32]
     ori_ip = data[32:64]
     ttl = data[64:72]
     protocol = data[72:80]
-    payload_size = int(data[80:88],2) *8
     payload = data[88:]
+    return (des_ip, ori_ip, ttl, protocol, payload)
+
+def get_package_from_frame_in_router(frame:str, interface:Interface):
+    ip_packet_elems = get_ip_packet_elems(frame)
+    des_ip = ip_packet_elems[0]
+    ori_ip = ip_packet_elems[1]
+    ttl = ip_packet_elems[2]
+    protocol = ip_packet_elems[3]
+    payload = ip_packet_elems[4]
     packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
     
     return packet
 
 def get_new_packet_resquest_from_frame(frame:str, interface:Interface, newPayload):
-    data = get_data_from_frame(frame)
+    data = linkl.get_data_from_frame(frame)
     des_ip = data[0:32]
     ori_ip = data[32:64]
     ttl = data[64:72]
