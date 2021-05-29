@@ -108,7 +108,17 @@ class Device_handler:
         return True            
 
     def __valid_mac(self,mac) -> bool:                                #broadcast
-        return any(host.mac == mac for host in self.hosts)  or mac == 'FFFF'
+        return  self.__PC_mac(mac) or self.__Router_mac(mac)  or mac == 'FFFF'
+
+    def __PC_mac(self,mac):
+        return any(host.mac == mac for host in self.hosts)
+    
+    def __Router_mac(self, mac):
+        for router in self.routers:
+            for interface in router.interfaces.values():
+                if interface.mac == mac:
+                    return True
+        return False
 
     def __validate_send_frame(self,host, destiny_mac):
         if not any(host == h.name for h in self.hosts):
@@ -141,8 +151,11 @@ class Device_handler:
     def finished_network_transmission(self):
         # al no quedar mas instruccionens por ejecutar
         # mantengo recorrido de los devices mientras haya alguna
-        # actividad de los host      
-        while any(host.transmitting or host.stopped for host in self.hosts) or any(switch.check_transmitting() for switch in self.switches):
+        # actividad en los host, los routers o los switches      
+        while any(host.transmitting or host.stopped for host in self.hosts) or\
+            any(switch.check_transmitting() for switch in self.switches) or\
+            any(router.check_transmitting() or router.check_stopped() for router in self.routers):
+            
             self.time += 1
             self.__update_devices()
 
@@ -189,6 +202,7 @@ class Device_handler:
         if self.__validate_ip(device_name, ip, mask):
             if self.__isPC(device_name):
                 self.ports[f"{device_name}_1"].device.setup_ip(ip,mask)
+                return
             if self.__isRouter(device_name):
                 router = self.__getRouterFromName(device_name)
                 router.setup_ip(ip, mask,f"{device_name}_{interface}")
@@ -493,9 +507,9 @@ class Device_handler:
         if self.__validate_send_packet(host_name, des_ip, data):
             host = self.ports[host_name+'_1'].device
             bin_data = linkl.setup_data(data)
-            host.add_packet(des_ip, bin_data)
             route = netl.search_match_route(des_ip, host.routes)
-            ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
             if route != None:
+                ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+                host.add_packet(ip_connect, des_ip, bin_data)
                 netl.search_ip(host, 'FFFF', ip_connect)
 

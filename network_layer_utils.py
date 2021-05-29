@@ -21,7 +21,7 @@ def setupFrameFromPacketRouter(packet, router, interface, port):
     new_frame = linkl.get_frame(packet.mac_des,interface.mac,data)
     interface.add_frame(new_frame)
     if not interface.transmitting and not interface.stopped:
-        nextbit = interface.nextbit()
+        nextbit = interface.next_bit()
         if nextbit != None:
             handler.devices_visited.clear()
             router.init_transmission(nextbit, port, handler.devices_visited, handler.time)
@@ -35,7 +35,7 @@ def checkARP(host, des_mac, bits):
             handler.send_frame(host.name, des_mac, ARPResponse(ip), handler.time)
         if word == 'ARPR':
             for packet in host.packets:
-                if packet.des_ip == ip:
+                if packet.ip_connect == ip:
                     packet.mac_des = des_mac
             check_PackageCondition(host)     
 
@@ -47,14 +47,14 @@ def checkARPP_Router(router, interface,port,des_mac, bits):
             new_frame = linkl.get_frame(des_mac,interface.mac,ARPResponse(ip))
             interface.add_frame(new_frame)
             if not interface.transmitting and not interface.stopped:
-                nextbit = interface.nextbit()
+                nextbit = interface.next_bit()
                 if nextbit != None:
                     handler.devices_visited.clear()
-                    interface.init_transmission(nextbit, port, handler.devices_visited, handler.time)
+                    router.init_transmission(nextbit, port, handler.devices_visited, handler.time)
                         
         if word == 'ARPR':
             for packet in interface.packets:
-                if packet.des_ip == ip:
+                if packet.ip_connect == ip:
                     packet.mac_des = des_mac
             check_PackageCondition_From_Router(interface,port, router)  
 
@@ -66,15 +66,15 @@ def is_ip_packet(data):
         return payload_size == len(payload)
     return False
 
-def get_packet_from_frame(frame:str, interface):
+def get_packet_from_frame(frame:str):
     data = linkl.get_data_from_frame(frame)
     des_ip = get_ip_from_bin(data[0:32])    
     ori_ip = get_ip_from_bin(data[32:64])
     ttl = int(data[64:72],2)
     protocol = int(data[72:80])
     payload = data[88:]
-    new_packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
-    return new_packet
+    
+    return [des_ip, ori_ip, ttl, protocol, payload]
     
 
 
@@ -174,14 +174,14 @@ def get_ip_packet_elems(frame:str):
     payload = data[88:]
     return (des_ip, ori_ip, ttl, protocol, payload)
 
-def get_package_from_frame_in_router(frame:str, interface:Interface):
+def get_package_from_frame_in_router(frame:str, interface:Interface, ip_connect):
     ip_packet_elems = get_ip_packet_elems(frame)
-    des_ip = ip_packet_elems[0]
-    ori_ip = ip_packet_elems[1]
-    ttl = ip_packet_elems[2]
-    protocol = ip_packet_elems[3]
+    des_ip = get_ip_from_bin(ip_packet_elems[0])
+    ori_ip = get_ip_from_bin(ip_packet_elems[1])
+    ttl = int(ip_packet_elems[2])
+    protocol = int(ip_packet_elems[3])
     payload = ip_packet_elems[4]
-    packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
+    packet = Packet(ip_connect, interface.mac, ori_ip, des_ip, payload, protocol, ttl)
     
     return packet
 
@@ -216,7 +216,7 @@ def delete_route(routes:'list[Route]', destination:str, mask:str, gateway:str, i
     return routes
 
 def match_route(route:Route, ip):
-    andOp = get_and_ip_op(route.gateway, ip) 
+    andOp = get_and_ip_op(route.mask, ip) 
     return andOp == route.destination
 
 def search_match_route(ip,routes:'list[Route]'):

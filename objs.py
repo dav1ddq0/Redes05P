@@ -89,7 +89,9 @@ class Router:
         if len(frame) > 48:
             #obtengo la cantidad de bits que debe de tener la data del frame            
             nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
-            
+            ori_mac = linkl.get_hex_ori_mac_from_frame(frame)
+            des_mac = linkl.get_hex_des_mac_from_frame(frame)
+
             len_verification_data = int(frame[40:48], 2) * 8 # longitud de los datos de verificacion en bits
             
             data_plus_verificationd = frame[48:]
@@ -97,12 +99,12 @@ class Router:
             if len(data_plus_verificationd) == nsizebits + len_verification_data:
                 #obtengo en hexadecimal la data 
                 data = linkl.get_data_from_frame(frame)
-                netl.checkARPP_Router(rinterface,incoming_port, rinterface.mac,data, self)
+                netl.checkARPP_Router(self, rinterface,incoming_port, ori_mac,data)
 
                 if netl.is_ip_packet(data):
-                    packet = netl.get_packet_from_frame(frame)
+                    des_ip = netl.get_packet_from_frame(frame)[0]
                     
-                    route = netl.search_match_route(packet.des_ip, self.routes)
+                    route = netl.search_match_route(des_ip, self.routes)
                     #ninguna ruta puede enrutar dicho paquete
                     if route == None:
                         icmp3 = netl.get_destination_host_unreachable_frame(frame, rinterface)
@@ -117,18 +119,16 @@ class Router:
                         
                         sportname = f'{self.name}_{route.interface}'
                         sinterface = self.interfaces[sportname]
+                        ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+                        packet = netl.get_package_from_frame_in_router(frame, sinterface, ip_connect)
                         sinterface.add_packet(packet)
-                        data = netl.get_data_from_frame(frame)
-                        packet = netl.get_package_from_frame_in_router(frame, sinterface)
-                        sinterface.packets.append(packet)
                         sport = self.get_port_from_name(sportname)
-                        ip_connect = route.gateway if route.gateway != '0.0.0.0' else packet.des_ip
                         arpq = netl.seach_ip_from_router(sinterface,'FFFF',ip_connect)
                         sinterface.add_frame(arpq)
                         if not sinterface.transmitting and not sinterface.stopped:
-                            nextbit = sinterface.nextbit()
+                            nextbit = sinterface.next_bit()
                             if nextbit != None:
-                                sinterface.init_transmission(nextbit, sport, devices_visited, time)
+                                self.init_transmission(nextbit, sport, devices_visited, time)
 
                 rinterface.rframe = ""
                 
@@ -164,7 +164,7 @@ class Router:
     
     
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
-        interface = self.buffers[incoming_port.name]
+        interface = self.interfaces[incoming_port.name]
         
         if self.put_data(nextbit, incoming_port):
             interface.transmitting = True
@@ -180,6 +180,9 @@ class Router:
     
     def check_stopped(self):
         return any(interface.stopped for interface in self.interfaces.values())
+    
+    def missing_data(self,incoming_port, device_visited):
+        return
 class Host:
     def __init__(self, name: str, error_detection) -> None:
         self.name = name
@@ -233,8 +236,8 @@ class Host:
     def delete_route(self, destination:str, mask:str, gateway:str, interface:int):
         self.routes = netl.delete_route(self.routes.copy(), destination, mask, gateway, interface)
 
-    def add_packet(self, des_ip, data, protocol=0,ttl=0):
-        p = neto.Packet(self.mac, self.ip, des_ip, data, protocol, ttl)
+    def add_packet(self, ip_connect, des_ip, data, protocol=0,ttl=0):
+        p = neto.Packet(ip_connect,self.mac, self.ip, des_ip, data, protocol, ttl)
         self.packets.append(p)
 
     
@@ -359,6 +362,7 @@ class Host:
                 #obtengo en hexadecimal la data 
                 # print(f"{origin_mac}--{des_mac} vs {self.mac}")
                 data = self.rframe[48:48+nsizebits]
+            
                 # check if a frame es from ARP Protocol
                 netl.checkARP(self, origin_mac, data)
                 # if frame es ip packet

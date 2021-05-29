@@ -28,4 +28,8 @@ def get_data_from_frame(frame:str):
     data = frame[48:48+nsizebits]
     return data
 # def send_frame_from_router(router, destiny):
-    
+def get_hex_des_mac_from_frame(frame:str):
+    return '{:X}'.format(int(frame[0:16], 2))
+
+def get_hex_ori_mac_from_frame(frame:str):
+    return '{:X}'.format(int(frame[16:32], 2))
