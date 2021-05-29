@@ -122,7 +122,8 @@ class Router:
                         packet = netl.get_package_from_frame_in_router(frame, sinterface)
                         sinterface.packets.append(packet)
                         sport = self.get_port_from_name(sportname)
-                        arpq = netl.seach_ip_from_router(sinterface,'FFFF',route.gateway)
+                        ip_connect = route.gateway if route.gateway != '0.0.0.0' else packet.des_ip
+                        arpq = netl.seach_ip_from_router(sinterface,'FFFF',ip_connect)
                         sinterface.add_frame(arpq)
                         if not sinterface.transmitting and not sinterface.stopped:
                             nextbit = sinterface.nextbit()
@@ -227,8 +228,7 @@ class Host:
         self.routes.clear()
 
     def add_new_route(self, destination, mask, gateway, interface):
-        route = neto.Route(destination, mask, gateway, interface)
-        self.routes = netl.add_route(self.routes.copy(), route)
+        self.routes = netl.add_route(self.routes.copy(), destination, mask, gateway, interface)
     
     def delete_route(self, destination:str, mask:str, gateway:str, interface:int):
         self.routes = netl.delete_route(self.routes.copy(), destination, mask, gateway, interface)

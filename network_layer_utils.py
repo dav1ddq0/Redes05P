@@ -202,7 +202,7 @@ def get_1s_mask(mask:str):
 def add_route(routes:'list[Route]', destination:str, mask:str, gateway:str, interface:int):
     route = route = Route(destination, mask, gateway, interface)
     for i,r in enumerate(routes):
-        if get_1s_mask(r.mask) > get_1s_mask(route.mask):
+        if get_1s_mask(route.mask) > get_1s_mask(r.mask):
             routes.insert(i, route)
             return routes
     routes.append(route)
@@ -230,4 +230,4 @@ def search_match_route(ip,routes:'list[Route]'):
     
 
 
-print(get_and_ip_op(input(),input()))
+# print(get_and_ip_op(input(),input()))

@@ -255,7 +255,7 @@ class Device_handler:
 
 
 
-    def setup_delete(self, name_port1: str, name_port2: str, time: int):
+    def setup_connection(self, name_port1: str, name_port2: str, time: int):
         # actualiza la red hasta que llegues al time en que vino la nueva instruccion
         self.__update_network_status(time)
 
@@ -482,6 +482,9 @@ class Device_handler:
             host = self.ports[host_name+'_1'].device
             bin_data = linkl.setup_data('8')
             host.add_packet(des_ip, bin_data, 1)
+            route = netl.search_match_route(des_ip, host.routes)
+            if route != None:
+                netl.search_ip(host, 'FFFF', route.gateway)
             
 
 
@@ -491,5 +494,8 @@ class Device_handler:
             host = self.ports[host_name+'_1'].device
             bin_data = linkl.setup_data(data)
             host.add_packet(des_ip, bin_data)
-            netl.search_ip(host, 'FFFF', des_ip)
-        
+            route = netl.search_match_route(des_ip, host.routes)
+            ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+            if route != None:
+                netl.search_ip(host, 'FFFF', ip_connect)
+
