@@ -7,7 +7,8 @@ caller ={
         "mac" : lambda args, time : mac_parse(args, time),
         "ip" : lambda args, time : ip_parse(args, time),
         "send_packet" : lambda args, time : send_packet_parse(args, time),
-        "route": lambda args, time: route_parser(args, time)
+        "route": lambda args, time: route_parser(args, time),
+        "ping" : lambda args, time: ping_parser(args, time)
         }
 
 
@@ -198,4 +199,9 @@ def route_parser(args:list, time:int):
         print("Invalid amount of arguments")
 
 
-
+# <time> ping <host> <ip-address>
+def ping_parser(args:list, time:int):
+    if len(args) ==3:
+        return args[0],[args[1], args[2], time]
+    else:
+        print("Invalid amount of arguments")

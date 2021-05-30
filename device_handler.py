@@ -492,13 +492,14 @@ class Device_handler:
     
     def ping (self, host_name, des_ip, time):
         self.__update_network_status(time)
-        if self.__validate_ping(host_name, des_ip):
+        if self.__validate_send_packet(host_name, des_ip, '8'):
             host = self.ports[host_name+'_1'].device
             bin_data = linkl.setup_data('8')
-            host.add_packet(des_ip, bin_data, 1)
             route = netl.search_match_route(des_ip, host.routes)
             if route != None:
-                netl.search_ip(host, 'FFFF', route.gateway)
+                ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+                host.add_packet(ip_connect, des_ip, bin_data, 1)
+                netl.search_ip(host, 'FFFF', ip_connect)
             
 
 

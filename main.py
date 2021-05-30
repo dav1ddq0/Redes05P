@@ -23,7 +23,8 @@ caller ={
         "send_packet" : lambda args : handler.send_packet(args[0],args[1],args[2], args[3]),
         "reset": lambda args: handler.route_reset(args[0],args[1]),
         "add": lambda args: handler.route_add(args[0], args[1], args[2], args[3], args[4], args[5]),
-        "delete": lambda args: handler.route_delete(args[0], args[1], args[2], args[3], args[4], args[5])
+        "delete": lambda args: handler.route_delete(args[0], args[1], args[2], args[3], args[4], args[5]),
+        "ping": lambda args: handler.ping(args[0], args[1], args[2])
         }
 
 # main :D

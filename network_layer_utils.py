@@ -17,7 +17,7 @@ def check_PackageCondition_From_Router(interface, port, router):
             interface.remove_packet(packet)
 
 def setupFrameFromPacketRouter(packet, router, interface, port):
-    data = ip_package(packet.ori_ip,packet.des_ip, packet.data)
+    data = ip_package(packet.ori_ip,packet.des_ip, packet.data, packet.ttl, packet.protocol)
     new_frame = linkl.get_frame(packet.mac_des,interface.mac,data)
     interface.add_frame(new_frame)
     if not interface.transmitting and not interface.stopped:
@@ -117,7 +117,7 @@ def get_and_ip_op(ip1,ip2):
 
 
 def setupFrameFromPacket(packet, host):
-    data = ip_package(packet.ori_ip,packet.des_ip, packet.data)
+    data = ip_package(packet.ori_ip,packet.des_ip, packet.data, packet.ttl, packet.protocol)
     handler.send_frame(host.name, packet.mac_des, data, handler.time)
 
 # identifica si un ip es valido
@@ -154,13 +154,13 @@ def ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     package += payload
     return package
 
-def get_destination_host_unreachable_frame(oldFrame, interface):
+def icmp_host_unreachable_frame(oldFrame, interface):
     des_mac = oldFrame[0:16]
     ori_mac = oldFrame[16:32]
     ip_packet_elems = get_ip_packet_elems(oldFrame)
     des_ip = ip_packet_elems[0]
     ori_ip = ip_packet_elems[1]
-    new_ip_packet =ip_package(interface.packet, ori_ip, format(3,'08b'), 0,1)
+    new_ip_packet =ip_package(interface.ip, ori_ip, format(3,'08b'), 0,1)
     new_frame = linkl.get_frame(ori_mac, des_mac, new_ip_packet)
     return new_frame
 
@@ -225,6 +225,14 @@ def search_match_route(ip,routes:'list[Route]'):
             return route
     return None
 
+def message_log_icmp(number:str):
+    if number == '0':
+        return 'echo reply'
+    elif number == '3':
+        return 'destination host unreachable'
+    elif number == '8':
+        return 'echo request'
+    return ''
 # def ping(host, ip:str):
 #     ping_package = ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     

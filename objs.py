@@ -107,12 +107,12 @@ class Router:
                     route = netl.search_match_route(des_ip, self.routes)
                     #ninguna ruta puede enrutar dicho paquete
                     if route == None:
-                        icmp3 = netl.get_destination_host_unreachable_frame(frame, rinterface)
+                        icmp3 = netl.icmp_host_unreachable_frame(frame, rinterface)
                         rinterface.add_frame(icmp3)
                         if not rinterface.transmitting and not rinterface.stopped:
-                            nextbit = rinterface.nextbit()
+                            nextbit = rinterface.next_bit()
                             if nextbit != None:
-                                rinterface.init_transmission(nextbit, incoming_port, devices_visited, time)
+                                self.init_transmission(nextbit, incoming_port, devices_visited, time)
                         # se debe enviar aca al host origen un paquete icmp
                     else:
                         # interface de salida
@@ -272,10 +272,12 @@ class Host:
 
     def log_payload(self, data, time):
         des_ip = netl.get_ip_from_bin(data[0:32])
+        protocol = int(data[72:80])
         if des_ip == self.ip:
             ori_ip = netl.get_ip_from_bin(data[32:64])
             payload = '{:X}'.format(int(data[88:],2))
-            message = f"{time} {ori_ip} {payload}\n"
+            icmp = netl.message_log_icmp(payload) if protocol == 1 else  ""
+            message = f"{time} {ori_ip} {payload} {icmp}\n"
             self.__update_file(message, self.payload)
 
     
