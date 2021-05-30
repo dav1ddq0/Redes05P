@@ -217,6 +217,7 @@ class Host:
         self.mask = None
         self.packets = []
         self.routes =[]
+        self.pings =[]
         # make txt files
         f = open(self.file, 'w')
         f.close()
@@ -239,7 +240,15 @@ class Host:
     def add_packet(self, ip_connect, des_ip, data, protocol=0,ttl=0):
         p = neto.Packet(ip_connect,self.mac, self.ip, des_ip, data, protocol, ttl)
         self.packets.append(p)
-
+            
+    def add_ping(self, ping):
+        self.pings.append(ping)
+        
+    def pings_remain(self):
+        return len(self.pings) > 0
+    
+    def update_pings(self):
+        self.pings = [ping for ping in self.pings if ping.remaining_messages != 0]
     
     def remove_packet(self, packet):
         self.packets.remove(packet)
@@ -369,6 +378,8 @@ class Host:
                 netl.checkARP(self, origin_mac, data)
                 # if frame es ip packet
                 if netl.is_ip_packet(data):
+                    if netl.is_ping(self,data):
+                        netl.pong(self, data)
                     self.log_payload(data, time)
 
                 verification_data = self.rframe[48+nsizebits:]

@@ -33,3 +33,6 @@ def get_hex_des_mac_from_frame(frame:str):
 
 def get_hex_ori_mac_from_frame(frame:str):
     return '{:X}'.format(int(frame[16:32], 2))
+
+def bin_to_hex(data):
+    return '{:X}'.format(int(data,2))

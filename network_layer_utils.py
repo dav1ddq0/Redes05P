@@ -31,7 +31,7 @@ def checkARP(host, des_mac, bits):
     if len(bits) == 64: #cumple el formato de 4 bytes ARPR | ARPQ 4bytes IP
         ip = get_ip_from_bin(bits[32:]) # convert bits chunk to {}.{}.{}.{} ip format 
         word = get_ascii_from_bin(bits[0:32]) # convert
-        if word == 'ARPQ':
+        if word == 'ARPQ' and ip == host.ip:
             handler.send_frame(host.name, des_mac, ARPResponse(ip), handler.time)
         if word == 'ARPR':
             for packet in host.packets:
@@ -39,11 +39,26 @@ def checkARP(host, des_mac, bits):
                     packet.mac_des = des_mac
             check_PackageCondition(host)     
 
+def is_ping(host, ip_packet):
+    des_ip = get_ip_from_bin(ip_packet[0:32])
+    protocol = int(ip_packet[72:80],2)
+    payload = linkl.bin_to_hex(ip_packet[88:])
+    return protocol == 1 and payload == '8' and host.ip == des_ip
+
+def pong(host,ip_packet):
+    new_des_ip = get_ip_from_bin(ip_packet[32:64])
+    bin_data = linkl.setup_data('0')
+    route = search_match_route(new_des_ip, host.routes)
+    if route != None:
+        ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+        host.add_packet(ip_connect, new_des_ip, bin_data, 1)
+        search_ip(host, 'FFFF', ip_connect)
+
 def checkARPP_Router(router, interface,port,des_mac, bits):
     if len(bits) == 64: #cumple el formato de 4 bytes ARPR | ARPQ 4bytes IP
         ip = get_ip_from_bin(bits[32:]) # convert bits chunk to {}.{}.{}.{} ip format 
         word = get_ascii_from_bin(bits[0:32]) # convert
-        if word == 'ARPQ':
+        if word == 'ARPQ' and ip == interface.ip:
             new_frame = linkl.get_frame(des_mac,interface.mac,ARPResponse(ip))
             interface.add_frame(new_frame)
             if not interface.transmitting and not interface.stopped:

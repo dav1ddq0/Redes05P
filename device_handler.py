@@ -5,7 +5,7 @@ import errors_algs
 import re
 import network_layer_utils as netl
 import link_layer_utils as linkl
-
+import network_layer_objs as neto
 errors = {1 : "do not has a cable connected", 2: "does not exist", 3: "is not free", 4: "the device must be a host",
         5: "host busy (collision)", 6: "has a cable connected, but its other endpoint is not connected to another device" }
 class bcolors:
@@ -152,7 +152,7 @@ class Device_handler:
         # al no quedar mas instruccionens por ejecutar
         # mantengo recorrido de los devices mientras haya alguna
         # actividad en los host, los routers o los switches      
-        while any(host.transmitting or host.stopped for host in self.hosts) or\
+        while any(host.transmitting or host.stopped or host.pings_remain() for host in self.hosts) or\
             any(switch.check_transmitting() for switch in self.switches) or\
             any(router.check_transmitting() or router.check_stopped() for router in self.routers):
             
@@ -395,7 +395,17 @@ class Device_handler:
                         
                     else:
                         host.transmitting = False
-                        host.transmitting_time = 0    
+                        host.transmitting_time = 0
+            
+            elif host.pings_remain():
+                for ping in host.pings:
+                    ping.remaining_time +=1
+                    if ping.remaining_time % 100 == 0:
+                        des_ip = ping.des_ip
+                        ping.remaining_messages -= 1
+                        ping.remaining_time = 0
+                        self.send_ping(host, des_ip)        
+                host.update_pings()
 
         for switch in self.switches:
             for port in switch.ports:
@@ -494,13 +504,18 @@ class Device_handler:
         self.__update_network_status(time)
         if self.__validate_send_packet(host_name, des_ip, '8'):
             host = self.ports[host_name+'_1'].device
-            bin_data = linkl.setup_data('8')
-            route = netl.search_match_route(des_ip, host.routes)
-            if route != None:
-                ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
-                host.add_packet(ip_connect, des_ip, bin_data, 1)
-                netl.search_ip(host, 'FFFF', ip_connect)
-            
+            ping = neto.Ping(des_ip)
+            host.add_ping(ping)
+            self.send_ping(host, des_ip)
+
+    def send_ping(self, host, des_ip):
+        bin_data = linkl.setup_data('8')
+        route = netl.search_match_route(des_ip, host.routes)
+        if route != None:
+            ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
+            host.add_packet(ip_connect, des_ip, bin_data, 1)
+            netl.search_ip(host, 'FFFF', ip_connect)
+
 
 
     def send_packet(self, host_name, des_ip,  data, time):

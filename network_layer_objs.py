@@ -18,6 +18,11 @@ class Route:
         self.gateway = gateway
         self.interface =interface
 
+class Ping:
+    def __init__(self, des_ip):
+        self.des_ip = des_ip
+        self.remaining_messages = 3
+        self.remaining_time = 0
 class Interface:
     def __init__(self):
         self.ip = None
