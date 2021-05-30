@@ -170,12 +170,12 @@ def ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     return package
 
 def icmp_host_unreachable_frame(oldFrame, interface):
-    des_mac = oldFrame[0:16]
-    ori_mac = oldFrame[16:32]
+    des_mac = linkl.bin_to_hex(oldFrame[0:16])
+    ori_mac = linkl.bin_to_hex(oldFrame[16:32])
     ip_packet_elems = get_ip_packet_elems(oldFrame)
-    des_ip = ip_packet_elems[0]
-    ori_ip = ip_packet_elems[1]
-    new_ip_packet =ip_package(interface.ip, ori_ip, format(3,'08b'), 0,1)
+    des_ip = get_ip_from_bin(ip_packet_elems[0])
+    ori_ip = get_ip_from_bin(ip_packet_elems[1])
+    new_ip_packet = ip_package(interface.ip, ori_ip, format(3,'08b'), 0, 1)
     new_frame = linkl.get_frame(ori_mac, des_mac, new_ip_packet)
     return new_frame
 
