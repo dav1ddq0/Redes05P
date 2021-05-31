@@ -158,6 +158,7 @@ class Router:
             return False
         else:
             port.write_channel.data = data
+            self.interfaces[port.name].bit_sending = data
             return True
 
 
@@ -671,6 +672,7 @@ class Switch:
         if self.put_data(nextbit, incoming_port):
             buffer.transmitting = True
             buffer.transmitting_time = 0
+            buffer.bit_sending = nextbit
             self.send(nextbit, incoming_port, devices_visited, time)
         else:
             self.colision_protocol(incoming_port, time)    
@@ -681,7 +683,7 @@ class Switch:
 
         self.log(bit, "send", incoming_port.name, time)
         nextport = incoming_port.next
-        nextport.device.receive(bit, incoming_port, devices_visited, time)
+        nextport.device.receive(bit, nextport, devices_visited, time)
         
 
 

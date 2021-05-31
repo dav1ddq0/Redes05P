@@ -29,7 +29,6 @@ class Interface:
         self.mask = None
         self.mac = None
         self.packets= []
-        self.frames =[]
         self.sframe_pending = queue.Queue()
         # receive frame that is being put together
         self.rframe = ""

@@ -37,8 +37,9 @@ def checkARP(host, des_mac, bits):
             for packet in host.packets:
                 if packet.ip_connect == ip:
                     packet.mac_des = des_mac
-            check_PackageCondition(host)     
+            check_PackageCondition(host)   
 
+# verifica si el paquete ip correspone con un icmp tipo ping (payload =8)
 def is_ping(host, ip_packet):
     des_ip = get_ip_from_bin(ip_packet[0:32])
     protocol = int(ip_packet[72:80],2)
@@ -46,6 +47,7 @@ def is_ping(host, ip_packet):
     return protocol == 1 and payload == '8' and host.ip == des_ip
 
 def pong(host,ip_packet):
+    des_ip = get_ip_from_bin(ip_packet[0:32])
     new_des_ip = get_ip_from_bin(ip_packet[32:64])
     bin_data = linkl.setup_data('0')
     route = search_match_route(new_des_ip, host.routes)
@@ -147,13 +149,14 @@ def get_bin_from_ascii(word):
         bin_ascii += format(ord(c), '08b')
     return bin_ascii
 
-
+#dada un ip te devuelve la data del
 def ARPQuery(ip):
     return get_bin_from_ascii('ARPQ') + get_bin_from_ip(ip)
 
 def ARPResponse(ip):
     return get_bin_from_ascii('ARPR') + get_bin_from_ip(ip)
 
+# dada un ip te devuelve su representaci'on en binario
 def bin_ip(ip):
     result= ""
     for n in ip.split('.'):
@@ -169,6 +172,7 @@ def ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
     package += payload
     return package
 
+# te devuelve un frame que corresponde al envia de un paquete ip con protocolo icmp y payload =3 que es cuando es unreachable el ip
 def icmp_host_unreachable_frame(oldFrame, interface):
     des_mac = linkl.bin_to_hex(oldFrame[0:16])
     ori_mac = linkl.bin_to_hex(oldFrame[16:32])
@@ -209,11 +213,12 @@ def get_new_packet_resquest_from_frame(frame:str, interface:Interface, newPayloa
     payload = format(3, '08b')
     packet = Packet(interface.mac, ori_ip, des_ip, payload, protocol, ttl)
     return packet
-# Devuelve la cantidad la cantidad de unos de la máscara de subred.
 
+# Devuelve la cantidad la cantidad de unos de la máscara de subred.
 def get_1s_mask(mask:str):
     return get_bin_from_ip(mask).count('1')
 
+# Actualiza la lista de rutas con una nueva ruta manteniendo el orden de prioridad por la cantidad de 1s de la mask 
 def add_route(routes:'list[Route]', destination:str, mask:str, gateway:str, interface:int):
     route = route = Route(destination, mask, gateway, interface)
     for i,r in enumerate(routes):
@@ -223,6 +228,7 @@ def add_route(routes:'list[Route]', destination:str, mask:str, gateway:str, inte
     routes.append(route)
     return routes
 
+# eliminar una ruta de la lista de rutas 
 def delete_route(routes:'list[Route]', destination:str, mask:str, gateway:str, interface:int):
     for route in routes:
         if route.destination == destination and route.mask == mask and route.gateway == gateway and route.interface == interface:
@@ -230,6 +236,8 @@ def delete_route(routes:'list[Route]', destination:str, mask:str, gateway:str, i
             return routes
     return routes
 
+# devuelve True o False en dependencia de si la ruta enruta o no con el ip
+# La ruta enruta con el ip si al hacer and entre el ip y la mask de la ruta te da el mismo ip que hay en destination
 def match_route(route:Route, ip):
     andOp = get_and_ip_op(route.mask, ip) 
     return andOp == route.destination
@@ -240,6 +248,7 @@ def search_match_route(ip,routes:'list[Route]'):
             return route
     return None
 
+# imprime un mensaje en dependencia del valor del payload en un paquete ip icmp
 def message_log_icmp(number:str):
     if number == '0':
         return 'echo reply'
@@ -248,10 +257,3 @@ def message_log_icmp(number:str):
     elif number == '8':
         return 'echo request'
     return ''
-# def ping(host, ip:str):
-#     ping_package = ip_package(ori_ip,des_ip, payload, ttl=0, protocol=0):
-    
-
-
-# print(get_and_ip_op(input(),input()))
-print(get_bin_from_ip(input()))

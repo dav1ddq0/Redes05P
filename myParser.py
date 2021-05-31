@@ -110,8 +110,10 @@ def send_frame_parse(args: list, time: int):
 def connect_parse(args: list, time: int):
 
     if args[1].find('_') != -1 and args[2].find('_') != -1:
-            _, device1_port = args[1].split('_')
-            _, device2_port = args[2].split('_')
+            split1 = args[1].split('_')
+            split2 = args[2].split('_')
+            device1_port = split1[len(split1)-1]
+            device2_port = split2[len(split2)-1]
 
             try:
                 device1_port = int(device1_port)
