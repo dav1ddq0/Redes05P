@@ -254,3 +254,4 @@ def message_log_icmp(number:str):
 
 
 # print(get_and_ip_op(input(),input()))
+print(get_bin_from_ip(input()))
