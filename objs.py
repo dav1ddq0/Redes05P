@@ -428,8 +428,9 @@ class Host:
                 
 
     def death_short(self, incoming_port, time):
-        incoming_port.write_channel.data = Data.Null
-        self.colision_protocol(time)
+        if self.transmitting:
+            incoming_port.write_channel.data = Data.Null
+            self.colision_protocol(time)
 
     def missing_data(self,incoming_port, devices_visited):
         return
@@ -497,15 +498,21 @@ class Hub:
                 _port.next.device.receive(bit, _port.next, devices_visited, time)
 
 
-    def death_short(self, incoming_port, time: int):
+    def death_short(self, incoming_port: Port, time: int):
         self.bit_sending = None
-        incoming_port.read_channel = Data.Null
+        incoming_port.write_channel.data = Data.Null
         incoming_port.next.device.death_short(incoming_port.next, time)
-        for port in [p for p in self.ports if p != incoming_port and p.cable != None]:
-            port.write_channel.data = Data.Null
-            if port.next != None:
-                port.next.device.death_short(port.next, time)
-    
+        
+        # se manda a parar a todo los demas host que esten enviando por el hub
+        for port in self.ports:
+            if port != incoming_port and port.cable != None:
+                port.write_channel.data = Data.Null
+                if port.next != None:
+                    nextport = port.next
+                    nextport.device.death_short(nextport, time)
+        
+        
+            
     def missing_data(self, incoming_port, devices_visited):
         self.bit_sending = None
         if self in devices_visited:
@@ -530,7 +537,6 @@ class Buffer:
         self.incoming_frame = ""
         self.transmitting = False
         self.receiving = False
-        self.mac = None
         self.bit_sending = None
         self.transmittig_time = 0
         self.failed_attempts = 0
@@ -597,7 +603,7 @@ class Switch:
         self.buffers[incoming_port.name].put_data(bit)
         self.check_buffers(devices_visited, time)
 
-    def put_data(self, data: str, port: Port):
+    def put_data(self, data: str, port: Port) -> bool:
         if port.cable == None or port.write_channel.data != Data.Null or port.next == None:
             return False
         else:
@@ -644,9 +650,10 @@ class Switch:
                 checkrest = incoming_frame[48:]
                 
                 if len(checkrest) == lendatabits + len_verification_data:
-                    destiny_mac = '{:X}'.format(int(incoming_frame[0:16], 2))
+                    ori_mac = linkl.get_hex_ori_mac_from_frame(incoming_frame)
+                    des_mac = linkl.get_hex_des_mac_from_frame(incoming_frame)
                     # en caso que la mac este guardada en la tabla de del switch
-                    if destiny_mac not in self.map.keys():
+                    if des_mac not in self.map.keys():
                         
                         for p2 in [p for p in self.ports if p !=port]:
                             name = p2.name
@@ -658,7 +665,7 @@ class Switch:
                                     self.init_transmission(nextbit, p2, devices_visited, time)
 
                     else:
-                        nextport = self.map[destiny_mac]
+                        nextport = self.map[des_mac]
                         npbuffer = self.buffers[nextport.name]
                         npbuffer.add_frame(incoming_frame)
                         if not npbuffer.transmitting and not npbuffer.stopped:
@@ -696,8 +703,6 @@ class Switch:
         portbuff = self.buffers[incoming_port.name]
         if portbuff.transmitting:
             self.colision_protocol(incoming_port, time)
-
-        return
         
         
     def missing_data(self,incoming_port, device_visited):

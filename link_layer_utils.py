@@ -29,10 +29,10 @@ def get_data_from_frame(frame:str):
     return data
 # def send_frame_from_router(router, destiny):
 def get_hex_des_mac_from_frame(frame:str):
-    return '{:X}'.format(int(frame[0:16], 2))
+    return bin_to_hex(frame[0:16])
 
 def get_hex_ori_mac_from_frame(frame:str):
-    return '{:X}'.format(int(frame[16:32], 2))
+    return bin_to_hex(frame[16:32])
 
 def bin_to_hex(data):
     return '{:X}'.format(int(data,2))
