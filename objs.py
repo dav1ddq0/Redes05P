@@ -174,7 +174,7 @@ class Router:
         else:
             self.colision_protocol(incoming_port, time)
             
-            # self.colision_protocol(incoming_port, time) 
+            
     
     def check_transmitting(self):
         return any(interface.transmitting for interface in self.interfaces.values())
@@ -184,6 +184,11 @@ class Router:
     
     def missing_data(self,incoming_port, device_visited):
         return
+    
+    def death_short(self, incoming_port, time):
+        interface = self.interfaces[incoming_port.name]
+        if interface.transmitting:
+            self.colision_protocol(incoming_port, time)
 class Host:
     def __init__(self, name: str, error_detection) -> None:
         self.name = name
@@ -468,7 +473,7 @@ class Hub:
         f.close()
 
     def log(self, data, action, port, time) -> None:
-        message = f"{time} {port} {action} {data}\n"
+        message = f"{time} {port.name} {action} {data}\n"
         self.__update_file(message)
 
     def put_data(self, data: str, port: Port):
@@ -700,8 +705,8 @@ class Switch:
 
 
     def death_short(self, incoming_port, time):
-        portbuff = self.buffers[incoming_port.name]
-        if portbuff.transmitting:
+        buffer = self.buffers[incoming_port.name]
+        if buffer.transmitting:
             self.colision_protocol(incoming_port, time)
         
         
@@ -711,3 +716,5 @@ class Switch:
     def check_transmitting(self):
         return any(buffer.transmitting for buffer in self.buffers.values())
         
+    def check_stopped(self):
+        return any(buffer.stopped for buffer in self.buffers.values())

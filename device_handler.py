@@ -153,7 +153,7 @@ class Device_handler:
         # mantengo recorrido de los devices mientras haya alguna
         # actividad en los host, los routers o los switches      
         while any(host.transmitting or host.stopped or host.pings_remain() for host in self.hosts) or\
-            any(switch.check_transmitting() for switch in self.switches) or\
+            any(switch.check_transmitting() or switch.check_stopped() for switch in self.switches) or\
             any(router.check_transmitting() or router.check_stopped() for router in self.routers):
             
             self.time += 1
