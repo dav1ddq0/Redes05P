@@ -73,7 +73,7 @@ def checkARPP_Router(router, interface,port,des_mac, bits):
             for packet in interface.packets:
                 if packet.ip_connect == ip:
                     packet.mac_des = des_mac
-            check_PackageCondition_From_Router(interface,port, router)  
+            check_PackageCondition_From_Router(interface, port, router)  
 
 # revisa si la data puede ser un ip_packet
 def is_ip_packet(data):

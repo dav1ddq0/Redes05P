@@ -540,7 +540,12 @@ class Buffer:
     def put_data(self, bit):
         self.incoming_frame += bit       
         
-
+    def add_frame(self, frame):
+        if self.sending_frame == "":
+            self.sending_frame = frame
+        else:
+            self.sending_frame_pending.put(frame)
+        
     def next_bit(self):
         n = len(self.sending_frame)
         if n > 0:
@@ -646,22 +651,20 @@ class Switch:
                         for p2 in [p for p in self.ports if p !=port]:
                             name = p2.name
                             p2buffer =  self.buffers[name]
-                            if p2buffer.sending_frame != "":
-                                p2buffer.sending_frame_pending.put(incoming_frame)
-                            else:
-                                p2buffer.sending_frame = incoming_frame
-                            nextbit = p2buffer.next_bit()
-                            self.init_transmission(nextbit, p2, devices_visited, time)
+                            p2buffer.add_frame(incoming_frame)
+                            if not p2buffer.transmitting and not p2buffer.stopped:
+                                nextbit = p2buffer.next_bit()
+                                if nextbit != None:
+                                    self.init_transmission(nextbit, p2, devices_visited, time)
 
                     else:
                         nextport = self.map[destiny_mac]
                         npbuffer = self.buffers[nextport.name]
-                        if npbuffer.sending_frame != "":
-                            npbuffer.sending_frame_pending.put(incoming_frame)
-                        else:
-                            npbuffer.sending_frame = incoming_frame
-                        nextbit = npbuffer.next_bit()
-                        self.init_transmission(nextbit, nextport, devices_visited, time)
+                        npbuffer.add_frame(incoming_frame)
+                        if not npbuffer.transmitting and not npbuffer.stopped:
+                            nextbit = npbuffer.next_bit()
+                            if nextbit != None:
+                                self.init_transmission(nextbit, nextport, devices_visited, time)
                     
                     mybuffer.incoming_frame = ""
                 
