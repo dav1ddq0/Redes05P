@@ -150,7 +150,7 @@ class Router:
 
     def send(self, bit, incoming_port, devices_visited, time):
         nextport = incoming_port.next
-        nextport.device.receive(bit, incoming_port, devices_visited, time)
+        nextport.device.receive(bit, nextport, devices_visited, time)
         
 
     def put_data(self, data: str, port: Port):
