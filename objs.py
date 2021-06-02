@@ -75,11 +75,6 @@ class Router:
         self.interfaces[port].setup_mac(mac)
 
 
-    # comprobar en cada momento el cambio interno de un router
-    def check_interfaces(self, devices_visited, time):
-        pass 
-
-
     def receive(self, bit, incoming_port, devices_visited, time):
         # interface de entrada
         rinterface = self.interfaces[incoming_port.name]
@@ -103,7 +98,7 @@ class Router:
 
                 if netl.is_ip_packet(data):
                     des_ip = netl.get_packet_from_frame(frame)[0]
-                    
+                    ori_ip = netl.get_packet_from_frame(frame)[1]
                     route = netl.search_match_route(des_ip, self.routes)
                     #ninguna ruta puede enrutar dicho paquete
                     if route == None:
@@ -128,7 +123,8 @@ class Router:
                         if not sinterface.transmitting and not sinterface.stopped:
                             nextbit = sinterface.next_bit()
                             if nextbit != None:
-                                self.init_transmission(nextbit, sport, devices_visited, time)
+                                handler.devices_visited.clear()
+                                self.init_transmission(nextbit, sport, handler.devices_visited, time)
 
                 rinterface.rframe = ""
                 
@@ -536,7 +532,6 @@ class Hub:
 
 class Buffer:
     def __init__(self):
-        self.incoming_frame_pending = queue.Queue()
         self.sending_frame_pending = queue.Queue()
         # cadena de informacion que el switch ira transmitiendo por ese puerto hacia otro dispositivos
         self.sending_frame = ""
@@ -608,8 +603,41 @@ class Switch:
 
     def receive(self, bit, incoming_port, devices_visited, time):
         self.log(bit, "receive", incoming_port.name, time)
-        self.buffers[incoming_port.name].put_data(bit)
-        self.check_buffers(devices_visited, time)
+        buffer = self.buffers[incoming_port.name]
+        buffer.incoming_frame += bit
+        rframe = buffer.incoming_frame
+        
+        ## cumple el formato de una trama 16bit outmac 16 inmac 8 bit len 8bit0 data
+        if len(rframe) > 48:
+            lendatabits = int(rframe[32:40], 2) * 8
+            len_verification_data = int(rframe[40:48], 2) * 8
+            checkrest = rframe[48:]
+            
+            if len(checkrest) == lendatabits + len_verification_data:
+                ori_mac = linkl.get_hex_ori_mac_from_frame(rframe)
+                des_mac = linkl.get_hex_des_mac_from_frame(rframe)
+                # en caso que la mac este guardada en la tabla de del switch
+                if des_mac not in self.map.keys():
+                    
+                    for port in self.ports:
+                        if port != incoming_port:
+                            newbuffer =  self.buffers[port.name]
+                            newbuffer.add_frame(rframe)
+                            if not newbuffer.transmitting and not newbuffer.stopped:
+                                nextbit = newbuffer.next_bit()
+                                if nextbit != None:
+                                    self.init_transmission(nextbit, port, devices_visited, time)
+                        
+                else:
+                    nextport = self.map[des_mac]
+                    sbuffer = self.buffers[nextport.name]
+                    sbuffer.add_frame(rframe)
+                    if not sbuffer.transmitting and not sbuffer.stopped:
+                        nextbit = sbuffer.next_bit()
+                        if nextbit != None:
+                            self.init_transmission(nextbit, nextport, devices_visited, time)
+                
+                buffer.incoming_frame = ""
 
     def put_data(self, data: str, port: Port) -> bool:
         if port.cable == None or port.write_channel.data != Data.Null or port.next == None:
@@ -644,45 +672,6 @@ class Switch:
             else:
                 pbuffer.stopped = False
 
-    
-
-    # comprobar el en cada momento el cambio interno de un switch
-    def check_buffers(self, devices_visited, time):
-        for port in self.ports:
-            mybuffer = self.buffers[port.name]
-            incoming_frame = mybuffer.incoming_frame
-            ## cumple el formato de una trama 16bit outmac 16 inmac 8 bit len 8bit0 data
-            if len(incoming_frame) > 48:
-                lendatabits = int(incoming_frame[32:40], 2) * 8
-                len_verification_data = int(incoming_frame[40:48], 2) * 8
-                checkrest = incoming_frame[48:]
-                
-                if len(checkrest) == lendatabits + len_verification_data:
-                    ori_mac = linkl.get_hex_ori_mac_from_frame(incoming_frame)
-                    des_mac = linkl.get_hex_des_mac_from_frame(incoming_frame)
-                    # en caso que la mac este guardada en la tabla de del switch
-                    if des_mac not in self.map.keys():
-                        
-                        for p2 in [p for p in self.ports if p !=port]:
-                            name = p2.name
-                            p2buffer =  self.buffers[name]
-                            p2buffer.add_frame(incoming_frame)
-                            if not p2buffer.transmitting and not p2buffer.stopped:
-                                nextbit = p2buffer.next_bit()
-                                if nextbit != None:
-                                    self.init_transmission(nextbit, p2, devices_visited, time)
-
-                    else:
-                        nextport = self.map[des_mac]
-                        npbuffer = self.buffers[nextport.name]
-                        npbuffer.add_frame(incoming_frame)
-                        if not npbuffer.transmitting and not npbuffer.stopped:
-                            nextbit = npbuffer.next_bit()
-                            if nextbit != None:
-                                self.init_transmission(nextbit, nextport, devices_visited, time)
-                    
-                    mybuffer.incoming_frame = ""
-                
 
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
         buffer = self.buffers[incoming_port.name]
