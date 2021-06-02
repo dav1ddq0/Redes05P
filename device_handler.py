@@ -385,7 +385,7 @@ class Device_handler:
                         
                         # limpia el camino para enviar el proximo bit
                         self.devices_visited.clear()
-                        host.port.next.device.missing_data(host.port.next, self.devices_visited)
+                        nextdevice.missing_data(host.port.next, self.devices_visited)
                         
                     # intenta enviar el proximom bit 
                     if nex_bit != None:
@@ -409,25 +409,31 @@ class Device_handler:
 
         for switch in self.switches:
             for port in switch.ports:
-                portbuff = switch.buffers[port.name]
-                if portbuff.stopped:
-                    portbuff.stopped_time -= 1
-                    self.devices_visited.clear()
-                    port.device.init_transmission(portbuff.bit_sending, port, self.devices_visited, self.time)
+                buffer = switch.buffers[port.name]
+                
+                if buffer.stopped:
+                    buffer.stopped_time -= 1
+                    if buffer.stopped_time == 0:
+                        self.devices_visited.clear()
+                        port.device.init_transmission(buffer.bit_sending, port, self.devices_visited, self.time)
 
-                elif portbuff.transmitting:
-                    portbuff.transmitting_time += 1
-                    if portbuff.transmitting_time % self.slot_time == 0:
+                elif buffer.transmitting:
+                    buffer.transmitting_time += 1
+                    if buffer.transmitting_time % self.slot_time == 0:
                         port.write_channel.data = objs.Data.Null
                         self.devices_visited.clear()
                         port.next.device.missing_data(port.next, self.devices_visited) 
-                        nextbit = portbuff.next_bit()
+                        nextbit = buffer.next_bit()
                         if nextbit != None:
                             self.devices_visited.clear()
                             switch.init_transmission(nextbit, port, self.devices_visited, self.time)
                         else:
-                            portbuff.transmitting = False
-                            portbuff.bit_sending = None
+                            buffer.transmitting = False
+                            buffer.bit_sending = None
+                            # limpia el camino para enviar el proximo bit
+                            nextdevice = port.next.device
+                            self.devices_visited.clear()
+                            nextdevice.missing_data(port.next, self.devices_visited)
         
         for router in self.routers:
             for port in router.ports:

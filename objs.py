@@ -380,26 +380,22 @@ class Host:
                 # print(f"{origin_mac}--{des_mac} vs {self.mac}")
                 data = self.rframe[48:48+nsizebits]
             
-                # check if a frame es from ARP Protocol
-                netl.checkARP(self, origin_mac, data)
-                # if frame es ip packet
-                if netl.is_ip_packet(data):
-                    if netl.is_ping(self,data):
-                        netl.pong(self, data)
-                    self.log_payload(data, time)
 
                 verification_data = self.rframe[48+nsizebits:]
                 datahex = '{:X}'.format(int(data,2))
+                
+                self.rframe =""
+                
                 if self.error_detection =='crc':
                     data_to_verify = data + verification_data
                     decode = format(int(errors_algs.CRCDecode(data_to_verify), base = 2), '08b')
                     errors = errors_algs.CheckError(decode)
                     if errors:
                         self.log_frame(origin_mac, datahex, time, True)
+                        return
                     else:
                         # guardo en el file _data.txt la trama que recibio la pc
                         self.log_frame(origin_mac, datahex, time)
-                
                 else:
                     encoded_data,_ = errors_algs.hamming_encode(data)
                     errors,error_index = errors_algs.detect_error(encoded_data, int(verification_data,2))
@@ -409,16 +405,20 @@ class Host:
                         original_fixed = errors_algs.fix_bit(data, original_error_index)
                         original_fixed_hex = '{:X}'.format(int(original_fixed,2))
                         self.log_hamming(origin_mac, time, original_fixed_hex)
-
+                        return
                     else:
                         # guardo en el file _data.txt la trama que recibio la pc
                         self.log_frame(origin_mac, datahex, time)    
-                self.rframe =""    
+                    
+                # check if a frame es from ARP Protocol
+                netl.checkARP(self, origin_mac, data)
+                # if frame es ip packet
+                if netl.is_ip_packet(data):
+                    if netl.is_ping(self,data):
+                        netl.pong(self, data)
+                    self.log_payload(data, time)
 
 
-
-    
-    
     def send(self, data, incoming_port, devices_visited, time):
         if self in devices_visited:
             return
@@ -434,7 +434,6 @@ class Host:
 
     def death_short(self, incoming_port, time):
         if self.transmitting:
-            incoming_port.write_channel.data = Data.Null
             self.colision_protocol(time)
 
     def missing_data(self,incoming_port, devices_visited):
@@ -493,25 +492,26 @@ class Hub:
             return
         else:
             devices_visited.append(self)
-
+        
         for _port in self.ports:
-            if _port != incoming_port and  _port.cable!=None and _port.next != None:
+            if _port != incoming_port and  _port.cable !=None and _port.next != None:
                 if not self.put_data(bit, _port):
                     self.death_short(incoming_port, time)
                     return
                 _port.write_channel.data = bit
+                self.log(bit, "send", _port, time)
                 _port.next.device.receive(bit, _port.next, devices_visited, time)
 
 
     def death_short(self, incoming_port: Port, time: int):
         self.bit_sending = None
-        incoming_port.write_channel.data = Data.Null
+        incoming_port.read_channel.data = Data.Null
         incoming_port.next.device.death_short(incoming_port.next, time)
         
         # se manda a parar a todo los demas host que esten enviando por el hub
         for port in self.ports:
             if port != incoming_port and port.cable != None:
-                port.write_channel.data = Data.Null
+                port.read_channel.data = Data.Null
                 if port.next != None:
                     nextport = port.next
                     nextport.device.death_short(nextport, time)
@@ -700,8 +700,6 @@ class Switch:
         nextport = incoming_port.next
         nextport.device.receive(bit, nextport, devices_visited, time)
         
-
-
 
 
     def death_short(self, incoming_port, time):
