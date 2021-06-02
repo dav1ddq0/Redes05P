@@ -32,7 +32,14 @@ def checkARP(host, des_mac, bits):
         ip = get_ip_from_bin(bits[32:]) # convert bits chunk to {}.{}.{}.{} ip format 
         word = get_ascii_from_bin(bits[0:32]) # convert
         if word == 'ARPQ' and ip == host.ip:
-            handler.send_frame(host.name, des_mac, ARPResponse(ip), handler.time)
+            arpqFrame = linkl.get_frame(des_mac, host.mac, ARPResponse(ip))
+            host.add_frame(arpqFrame)
+            if not host.transmitting and not host.stopped:
+                nextbit = host.next_bit()
+                if nextbit != None:
+                    handler.devices_visited.clear()
+                    host.init_transmission(handler.devices_visited, nextbit, handler.time)
+
         if word == 'ARPR':
             for packet in host.packets:
                 if packet.ip_connect == ip:

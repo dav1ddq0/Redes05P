@@ -166,7 +166,7 @@ class Router:
     
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
         interface = self.interfaces[incoming_port.name]
-        
+        interface.stopped = False
         if self.put_data(nextbit, incoming_port):
             interface.transmitting = True
             interface.transmitting_time = 0
@@ -506,12 +506,14 @@ class Hub:
     def death_short(self, incoming_port: Port, time: int):
         self.bit_sending = None
         incoming_port.read_channel.data = Data.Null
+        incoming_port.write_channel.data = Data.Null
         incoming_port.next.device.death_short(incoming_port.next, time)
         
         # se manda a parar a todo los demas host que esten enviando por el hub
         for port in self.ports:
             if port != incoming_port and port.cable != None:
                 port.read_channel.data = Data.Null
+                port.write_channel.data =  Data.Null
                 if port.next != None:
                     nextport = port.next
                     nextport.device.death_short(nextport, time)
@@ -543,7 +545,7 @@ class Buffer:
         self.transmitting = False
         self.receiving = False
         self.bit_sending = None
-        self.transmittig_time = 0
+        self.transmitting_time = 0
         self.failed_attempts = 0
         self.stopped = False
         self.stopped_time = 0
@@ -683,7 +685,7 @@ class Switch:
 
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
         buffer = self.buffers[incoming_port.name]
-        
+        buffer.stopped = False
         if self.put_data(nextbit, incoming_port):
             buffer.transmitting = True
             buffer.transmitting_time = 0

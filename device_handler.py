@@ -445,7 +445,7 @@ class Device_handler:
                         self.devices_visited.clear()
                         # vuelve a intentar enviar el bit que habia fallado previamente
                         interface.stopped = False
-                        interface.init_transmission(self.devices_visited, host.bit_sending, self.time)
+                        router.init_transmission(self.devices_visited, host.bit_sending, self.time)
                 elif interface.transmitting:
                     interface.transmitting_time += 1
                     if interface.transmitting_time % self.slot_time == 0:
