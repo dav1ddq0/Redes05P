@@ -615,7 +615,7 @@ class Switch:
             port.write_channel.data = data
             return True
 
-    def colision_protocol(self, switch_port, time):
+    def colision_protocol(self, switch_port, nextbit, time):
         pbuffer = self.buffers[switch_port.name]
         pbuffer.transmitting = False
         # el host no puede enviar en este momento la sennal pues se esta transmitiendo informacion por el canal o no tiene canal para transmitir la informacion
@@ -623,7 +623,7 @@ class Switch:
         # aumenta la cantidad de intentos fallidos
         pbuffer.failed_attempts += 1 
         # notifica que hubo una colision y la informacion no pudo enviarse
-        self.log(pbuffer.bit_sending, "send", switch_port.name, time, True)
+        self.log(nextbit, "send", switch_port.name, time, True)
         # el rango se duplica en cada intento fallido
         if pbuffer.failed_attempts < 16:
             nrand = random.randint(1, 2*pbuffer.failed_attempts*10)
@@ -690,7 +690,7 @@ class Switch:
             buffer.bit_sending = nextbit
             self.send(nextbit, incoming_port, devices_visited, time)
         else:
-            self.colision_protocol(incoming_port, time)    
+            self.colision_protocol(incoming_port, nextbit, time)    
 
 
 
@@ -707,7 +707,7 @@ class Switch:
     def death_short(self, incoming_port, time):
         buffer = self.buffers[incoming_port.name]
         if buffer.transmitting:
-            self.colision_protocol(incoming_port, time)
+            self.colision_protocol(incoming_port, buffer.bit_sending, time)
         
         
     def missing_data(self,incoming_port, device_visited):
