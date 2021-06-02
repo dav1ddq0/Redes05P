@@ -166,6 +166,7 @@ class Router:
     
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
         interface = self.interfaces[incoming_port.name]
+        interface.bit_sending = nextbit
         interface.stopped = False
         if self.put_data(nextbit, incoming_port):
             interface.transmitting = True
@@ -686,6 +687,7 @@ class Switch:
     def init_transmission(self, nextbit, incoming_port, devices_visited, time):
         buffer = self.buffers[incoming_port.name]
         buffer.stopped = False
+        buffer.bit_sending = nextbit
         if self.put_data(nextbit, incoming_port):
             buffer.transmitting = True
             buffer.transmitting_time = 0
