@@ -372,7 +372,8 @@ class Host:
             
             data_plus_verificationd = self.rframe[48:]
             # la trama que llego a la pc es valida
-            if len(data_plus_verificationd) == nsizebits + len_verification_data and self.is_for_me(des_mac):
+            if len(data_plus_verificationd) == nsizebits + len_verification_data :
+                
                 #obtengo en hexadecimal la data 
                 # print(f"{origin_mac}--{des_mac} vs {self.mac}")
                 data = self.rframe[48:48+nsizebits]
@@ -380,40 +381,41 @@ class Host:
 
                 verification_data = self.rframe[48+nsizebits:]
                 datahex = '{:X}'.format(int(data,2))
-                
                 self.rframe =""
                 
-                if self.error_detection =='crc':
-                    data_to_verify = data + verification_data
-                    decode = format(int(errors_algs.CRCDecode(data_to_verify), base = 2), '08b')
-                    errors = errors_algs.CheckError(decode)
-                    if errors:
-                        self.log_frame(origin_mac, datahex, time, True)
-                        return
+                if self.is_for_me(des_mac):
+                    if self.error_detection =='crc':
+                        data_to_verify = data + verification_data
+                        decode = format(int(errors_algs.CRCDecode(data_to_verify), base = 2), '08b')
+                        errors = errors_algs.CheckError(decode)
+                        if errors:
+                            self.log_frame(origin_mac, datahex, time, True)
+                            return
+                        else:
+                            # guardo en el file _data.txt la trama que recibio la pc
+                            self.log_frame(origin_mac, datahex, time)
                     else:
-                        # guardo en el file _data.txt la trama que recibio la pc
-                        self.log_frame(origin_mac, datahex, time)
-                else:
-                    encoded_data,_ = errors_algs.hamming_encode(data)
-                    errors,error_index = errors_algs.detect_error(encoded_data, int(verification_data,2))
-                    if errors:
-                        self.log_frame(origin_mac, datahex, time,True)
-                        original_error_index = errors_algs.calc_error_bit_pos(error_index)
-                        original_fixed = errors_algs.fix_bit(data, original_error_index)
-                        original_fixed_hex = '{:X}'.format(int(original_fixed,2))
-                        self.log_hamming(origin_mac, time, original_fixed_hex)
-                        return
-                    else:
-                        # guardo en el file _data.txt la trama que recibio la pc
-                        self.log_frame(origin_mac, datahex, time)    
-                    
-                # check if a frame es from ARP Protocol
-                netl.checkARP(self, origin_mac, data)
-                # if frame es ip packet
-                if netl.is_ip_packet(data):
-                    if netl.is_ping(self,data):
-                        netl.pong(self, data)
-                    self.log_payload(data, time)
+                        encoded_data,_ = errors_algs.hamming_encode(data)
+                        errors,error_index = errors_algs.detect_error(encoded_data, int(verification_data,2))
+                        if errors:
+                            self.log_frame(origin_mac, datahex, time,True)
+                            original_error_index = errors_algs.calc_error_bit_pos(error_index)
+                            original_fixed = errors_algs.fix_bit(data, original_error_index)
+                            original_fixed_hex = '{:X}'.format(int(original_fixed,2))
+                            self.log_hamming(origin_mac, time, original_fixed_hex)
+                            return
+                        else:
+                            # guardo en el file _data.txt la trama que recibio la pc
+                            self.log_frame(origin_mac, datahex, time)    
+
+                    # check if a frame es from ARP Protocol
+                    netl.checkARP(self, origin_mac, data)
+                    # if frame es ip packet
+                    if netl.is_ip_packet(data):
+                        if netl.is_ping(self,data):
+                            netl.pong(self, data)
+                        self.log_payload(data, time)
+                
 
 
     def send(self, data, incoming_port, devices_visited, time):
