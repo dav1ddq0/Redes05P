@@ -546,8 +546,6 @@ class Buffer:
         self.stopped = False
         self.stopped_time = 0
 
-    def put_data(self, bit):
-        self.incoming_frame += bit       
         
     def add_frame(self, frame):
         if self.sending_frame == "":
@@ -609,13 +607,15 @@ class Switch:
         
         ## cumple el formato de una trama 16bit outmac 16 inmac 8 bit len 8bit0 data
         if len(rframe) > 48:
+            ori_mac = linkl.get_hex_ori_mac_from_frame(rframe)
+            des_mac = linkl.get_hex_des_mac_from_frame(rframe)
             lendatabits = int(rframe[32:40], 2) * 8
             len_verification_data = int(rframe[40:48], 2) * 8
             checkrest = rframe[48:]
             
+            
             if len(checkrest) == lendatabits + len_verification_data:
-                ori_mac = linkl.get_hex_ori_mac_from_frame(rframe)
-                des_mac = linkl.get_hex_des_mac_from_frame(rframe)
+                
                 # en caso que la mac este guardada en la tabla de del switch
                 if des_mac not in self.map.keys():
                     
