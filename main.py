@@ -1,6 +1,8 @@
+from genericpath import isdir
 import sys, argparse
 import device_handler as dh
 import myParser
+import os
 
 #load the configurable signal_time
 slot_time = int(open('./signal_time.txt', 'r').readline())
@@ -27,6 +29,13 @@ caller ={
         "ping": lambda args: handler.ping(args[0], args[1], args[2])
         }
 
+def clean_log_history(dir):
+        for f1 in os.listdir(dir):
+            path =os.path.join(dir, f1)
+            if isdir(path):
+                clean_log_history(path)
+            else:
+                os.remove(path)
 # main :D
 def main():
     
@@ -34,7 +43,7 @@ def main():
     parser.add_argument('-f', dest='textfile', default=True)
     args = parser.parse_args()
     filename = args.textfile
-    
+    clean_log_history('./Devices_Logs')
     f = open(filename, 'r')
     # has un recorrido por cada linea del file.txt
     for line in f.readlines():
