@@ -53,6 +53,7 @@ def is_ping(host, ip_packet):
     payload = linkl.bin_to_hex(ip_packet[88:])
     return protocol == 1 and payload == '8' and host.ip == des_ip
 
+# la respuesta un ping paquete icmp con payload 0
 def pong(host,ip_packet):
     des_ip = get_ip_from_bin(ip_packet[0:32])
     new_des_ip = get_ip_from_bin(ip_packet[32:64])

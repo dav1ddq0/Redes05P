@@ -7,7 +7,8 @@ def add_more_zeros(data:str):
         for i in range(near_mul(8, len(data))):
             data = '0' +data
         return data
-        
+
+# convert a hexadecial data to binary '08'
 def setup_data(data):
     databin = format(int(data, base = 16), '08b')
     return  add_more_zeros(databin) 
@@ -23,16 +24,20 @@ def get_frame(destiny_mac, origin_mac, data):
     return data_frame
 
 
+# return data from a frame
 def get_data_from_frame(frame:str):
     nsizebits = int(frame[32:40], 2) * 8 # size in bytes 8*size = size en bits
     data = frame[48:48+nsizebits]
     return data
-# def send_frame_from_router(router, destiny):
+
+# return destiny mac from frame
 def get_hex_des_mac_from_frame(frame:str):
     return bin_to_hex(frame[0:16])
 
+# return origin mac from a frame
 def get_hex_ori_mac_from_frame(frame:str):
     return bin_to_hex(frame[16:32])
 
+# convert from binary to hexadecimal
 def bin_to_hex(data):
     return '{:X}'.format(int(data,2))
