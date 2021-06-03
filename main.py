@@ -30,11 +30,11 @@ caller ={
 # main :D
 def main():
     
-    # parser = argparse.ArgumentParser(description="Instrucciones del script")
-    # parser.add_argument('-f', dest='textfile', default=True)
-    # args = parser.parse_args()
-    # filename = args.textfile
-    filename = input()
+    parser = argparse.ArgumentParser(description="Instrucciones del script")
+    parser.add_argument('-f', dest='textfile', default=True)
+    args = parser.parse_args()
+    filename = args.textfile
+    
     f = open(filename, 'r')
     # has un recorrido por cada linea del file.txt
     for line in f.readlines():
