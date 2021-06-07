@@ -48,7 +48,9 @@ Ahora un paquete se envia solamente desde un host o router si tiene una ruta que
 
  Al hacer ping desde host a un des_ip se envia paquete ip con protocolo icmp y payload =8  igual que cualquier otro paquete lo que con la peculiaridad de que ahora cada 100ms se tiene que vovler a enviar este paquete ip 3 veces más. Para hacer esto tenemos la clase Ping con propiedades remaining_messages, des_ip, remaining_time . Un host tiene una lista de Ping que permite enviar cada 100ms los restantes paquetes ip con protocolo ICMP y  payload =8 que queden producto de un ping. Si un Ping de la lista tiene remaining_messeges = 0 se elimina de la lista pues eso significa que ya se enviaron los 4 mensajes ICMP  con payload =8 al IP especificado en des_ip del Ping.
 
+Los host tienen un campo broadcast que identifca el ip que se considera de broadcast producto de hacer not(mask) or ip. Si el ip des del packet que se quiere mandar coincide con  la dirección de broadcast del host entonces se manda directo el ip packet sin hacer ARPQ  en un frame con mac des =`FFFF`   
 
+En el caso que sea un broadcast el router  no lo propaga
 
 ## Ejemplo: 
 
