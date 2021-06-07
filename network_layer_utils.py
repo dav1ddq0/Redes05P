@@ -291,7 +291,3 @@ def message_log_icmp(number:str):
     elif number == '8':
         return 'echo request'
     return ''
-
-# print(get_not_ip_op(input()))
-# print(get_and_ip_op(input(), input()))
-print(get_host_broadcast(input(), input()))
