@@ -96,7 +96,7 @@ class Router:
                 data = linkl.get_data_from_frame(frame)
                 netl.checkARPP_Router(self, rinterface,incoming_port, ori_mac,data)
 
-                if netl.is_ip_packet(data):
+                if netl.is_ip_packet(data) and des_mac != 'FFFF':
                     des_ip = netl.get_packet_from_frame(frame)[0]
                     ori_ip = netl.get_packet_from_frame(frame)[1]
                     route = netl.search_match_route(des_ip, self.routes)
@@ -218,6 +218,7 @@ class Host:
         self.error_detection = error_detection
         self.ip = None
         self.mask = None
+        self.broadcast = None
         self.packets = []
         self.routes =[]
         self.pings =[]
@@ -259,6 +260,7 @@ class Host:
     def setup_ip(self, ip, mask):
         self.ip = ip
         self.mask = mask
+        self.broadcast = netl.get_host_broadcast(self.ip, self.mask)
 
     def __update_file(self, message, file):
         f = open(file, 'a')

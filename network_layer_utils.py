@@ -140,6 +140,32 @@ def get_and_ip_op(ip1,ip2):
     
     return get_ip_from_bin(result)
 
+def get_or_ip_op(ip1,ip2):
+    ip1b = get_bin_from_ip(ip1)
+    ip2b = get_bin_from_ip(ip2)
+    result=''
+    
+    for i,j in zip(ip1b,ip2b) :
+        result += f'{int(i) | int(j)}'
+    
+    return get_ip_from_bin(result)
+
+def get_not_ip_op(ip1):
+    ip1b = get_bin_from_ip(ip1)
+    result=''
+    
+    for i in ip1b:
+        result += f'{int(not(int(i)))}'
+    
+    return get_ip_from_bin(result)
+
+def get_host_broadcast(ip, mask):
+    notMask = get_not_ip_op(mask)
+    return get_or_ip_op(notMask, ip)
+
+def send_broadcast(host, ori_ip, des_ip, payload):
+    data = ip_package(ori_ip, des_ip, payload)
+    handler.send_frame(host.name, 'FFFF', data, handler.time)
 
 def setupFrameFromPacket(packet, host):
     data = ip_package(packet.ori_ip,packet.des_ip, packet.data, packet.ttl, packet.protocol)
@@ -265,3 +291,7 @@ def message_log_icmp(number:str):
     elif number == '8':
         return 'echo request'
     return ''
+
+# print(get_not_ip_op(input()))
+# print(get_and_ip_op(input(), input()))
+print(get_host_broadcast(input(), input()))
