@@ -532,8 +532,8 @@ class Device_handler:
             route = netl.search_match_route(des_ip, host.routes)
             if route != None:
                 ip_connect = route.gateway if route.gateway != '0.0.0.0' else des_ip
-                if self.broadcast == des_ip:
-                    netl.send_broadcast(host, host.ip, des_ip, data)
+                if host.broadcast == des_ip:
+                    netl.send_broadcast(host, host.ip, des_ip, bin_data)
                 else:
                     host.add_packet(ip_connect, des_ip, bin_data)
                     netl.search_ip(host, 'FFFF', ip_connect)

@@ -43,7 +43,7 @@ def main():
     parser.add_argument('-f', dest='textfile', default=True)
     args = parser.parse_args()
     filename = args.textfile
-
+    
     # borra los registros de casos de prueba anteriores
     clean_log_history('./Devices_Logs')
     

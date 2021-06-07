@@ -287,12 +287,11 @@ class Host:
     def log_payload(self, data, time):
         des_ip = netl.get_ip_from_bin(data[0:32])
         protocol = int(data[72:80])
-        if des_ip == self.ip:
-            ori_ip = netl.get_ip_from_bin(data[32:64])
-            payload = '{:X}'.format(int(data[88:],2))
-            icmp = netl.message_log_icmp(payload) if protocol == 1 else  ""
-            message = f"{time} {ori_ip} {payload} {icmp}\n"
-            self.__update_file(message, self.payload)
+        ori_ip = netl.get_ip_from_bin(data[32:64])
+        payload = '{:X}'.format(int(data[88:],2))
+        icmp = netl.message_log_icmp(payload) if protocol == 1 else  ""
+        message = f"{time} {ori_ip} {payload} {icmp}\n"
+        self.__update_file(message, self.payload)
 
     
     def data(self, origin_mac, data_frame, time):
